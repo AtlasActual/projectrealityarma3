@@ -74,6 +74,8 @@ def build_pbo(source_dir, output_path):
         # Write prefix property
         write_asciiz(fp, "prefix")
         write_asciiz(fp, prefix)
+        # Empty string terminates the properties block
+        write_asciiz(fp, "")
 
         # Write file entries
         for pbo_path, abs_path, size in entries:
