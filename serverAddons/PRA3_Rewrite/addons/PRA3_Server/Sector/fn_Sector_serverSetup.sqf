@@ -77,8 +77,8 @@ if (!isServer) exitWith {};
         // ==============================================================
         // 6. Signal readiness to all machines
         // ==============================================================
-        GVAR(serverReady) = true;
-        publicVariable QGVAR(serverReady);
+        GVAR(setupDone) = true;
+        publicVariable QGVAR(setupDone);
         publicVariable QGVAR(sectorList);
 
         diag_log format ["[PRA3 Sector] Setup complete. %1 sectors created.", count GVAR(sectorList)];

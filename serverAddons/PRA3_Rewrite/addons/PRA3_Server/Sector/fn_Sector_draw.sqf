@@ -3,118 +3,142 @@
     FUNC(draw)
 
     Description:
-        Client-side drawing function for a single sector. Configures the
-        sector's map marker colour based on ownership, adds tactical
-        ATTACK / DEFEND icon markers, updates compass markers via the
-        CompassUI module, and prepares hover text.
+        Client-side rendering of a single sector on the map. Updates the
+        marker colour to match the current owner, overlays ATTACK or
+        DEFEND icon markers when appropriate, registers a compass marker
+        for active sectors, and shows designator + full name on hover.
 
     Params:
-        _sector - (Object) the sector logic to draw
-
-    Called from event handlers on "sideChanged" and "sectorOwnerChanged".
+        _sector - (Object) the sector logic unit to draw
 */
+
+if (!hasInterface) exitWith {};
 
 params ["_sector"];
 
 if (isNull _sector) exitWith {};
-if (!hasInterface) exitWith {};
 
-private _sectorName  = _sector getVariable [QGVAR(name), ""];
-private _markerName  = _sector getVariable [QGVAR(marker), ""];
-private _ownerSide   = _sector getVariable [QGVAR(ownerSide), sideUnknown];
-private _designator  = _sector getVariable [QGVAR(designator), ""];
-private _fullName    = _sector getVariable [QGVAR(fullName), ""];
-private _dependencies = _sector getVariable [QGVAR(dependencies), []];
+// ======================================================================
+// 1. Read sector state
+// ======================================================================
+private _sectorName    = _sector getVariable [QGVAR(name), ""];
+private _markerName    = _sector getVariable [QGVAR(marker), ""];
+private _ownerSide     = _sector getVariable [QGVAR(ownerSide), sideUnknown];
+private _attackingSide  = _sector getVariable [QGVAR(attackingSide), sideUnknown];
+private _isActive      = _sector getVariable [QGVAR(isActive), false];
+private _designator    = _sector getVariable [QGVAR(designator), ""];
+private _fullName      = _sector getVariable [QGVAR(fullName), ""];
+private _dependencies  = _sector getVariable [QGVAR(dependencies), []];
 
 if (_markerName isEqualTo "") exitWith {};
 
+private _playerSide = if (!isNull player) then { side group player } else { sideUnknown };
+private _sectorPos = markerPos _markerName;
+
 // ======================================================================
-// 1. Determine colour based on owner side
+// 2. Get owner side colour from Common module variables
 // ======================================================================
-private _color = switch (_ownerSide) do {
-    case west:        { EGVAR(Common,sideColor_west) };
-    case east:        { EGVAR(Common,sideColor_east) };
-    case independent: { EGVAR(Common,sideColor_independent) };
+private _sideColor = switch (_ownerSide) do {
+    case west: {
+        missionNamespace getVariable [QEGVAR(Common,sideColor_west), [0, 0.3, 0.6, 0.8]]
+    };
+    case east: {
+        missionNamespace getVariable [QEGVAR(Common,sideColor_east), [0.5, 0, 0, 0.8]]
+    };
+    case independent: {
+        missionNamespace getVariable [QEGVAR(Common,sideColor_independent), [0, 0.5, 0, 0.8]]
+    };
     default {
-        // Neutral / unknown -- use a grey tone
-        [0.5, 0.5, 0.5, 0.6]
-    };
-};
-
-// Fallback if side colour variable is not defined
-if (isNil "_color") then {
-    _color = switch (_ownerSide) do {
-        case west:        { [0, 0.3, 0.6, 0.6] };
-        case east:        { [0.5, 0, 0, 0.6] };
-        case independent: { [0, 0.5, 0, 0.6] };
-        default           { [0.5, 0.5, 0.5, 0.6] };
+        [0.5, 0.5, 0.5, 0.8]
     };
 };
 
 // ======================================================================
-// 2. Update the area marker colour and text
+// 3. Apply colour to the sector area marker
 // ======================================================================
-_markerName setMarkerColorLocal "Default";
-_markerName setMarkerAlphaLocal 0.45;
-
-// Apply custom RGBA via setMarkerColor (uses colour name or config)
 private _colorName = switch (_ownerSide) do {
     case west:        { "ColorBLUFOR" };
     case east:        { "ColorOPFOR" };
     case independent: { "ColorIndependent" };
-    default           { "ColorUNKNOWN" };
+    default           { "ColorWhite" };
 };
 _markerName setMarkerColorLocal _colorName;
 
-// ======================================================================
-// 3. Designator text marker (create once, update position)
-// ======================================================================
-private _textMarker = format ["%1_txt", _sectorName];
-if (getMarkerType _textMarker isEqualTo "") then {
-    createMarkerLocal [_textMarker, markerPos _markerName];
-    _textMarker setMarkerTypeLocal "mil_dot";
-    _textMarker setMarkerSizeLocal [0, 0];
-};
-_textMarker setMarkerTextLocal format [" %1", _designator];
-_textMarker setMarkerColorLocal _colorName;
+// Dim inactive sectors
+private _alpha = if (_isActive) then { 1.0 } else { 0.45 };
+_markerName setMarkerAlphaLocal _alpha;
 
 // ======================================================================
-// 4. Tactical icon: ATTACK if capturable by player, DEFEND if threatened
+// 4. Tactical icon overlay: ATTACK or DEFEND
 // ======================================================================
-private _playerSide = if (!isNull player) then { side group player } else { sideUnknown };
 private _iconMarker = format ["%1_icon", _sectorName];
-
-// Remove old icon
 deleteMarkerLocal _iconMarker;
 
-private _canPlayerAttack = [_sector, _playerSide] call FUNC(canCapture);
-private _attackingSide = _sector getVariable [QGVAR(attackingSide), sideUnknown];
+private _ownedByPlayer = _ownerSide isEqualTo _playerSide;
 
-if (_canPlayerAttack && {!(_ownerSide isEqualTo _playerSide)}) then {
-    // Show ATTACK icon
-    createMarkerLocal [_iconMarker, markerPos _markerName];
-    _iconMarker setMarkerTypeLocal "mil_objective";
-    _iconMarker setMarkerColorLocal "ColorBlack";
-    _iconMarker setMarkerTextLocal "";
-    _iconMarker setMarkerSizeLocal [0.8, 0.8];
+// Check if sector is capturable by the player's side
+private _capturableByPlayer = false;
+if (!_ownedByPlayer && _isActive) then {
+    if (_dependencies isEqualTo []) then {
+        _capturableByPlayer = true;
+    } else {
+        {
+            private _depSector = [_x] call FUNC(get);
+            if (!isNull _depSector) then {
+                private _depOwner = _depSector getVariable [QGVAR(ownerSide), sideUnknown];
+                if (_depOwner isEqualTo _playerSide) exitWith {
+                    _capturableByPlayer = true;
+                };
+            };
+        } forEach _dependencies;
+    };
+};
+
+if (_capturableByPlayer) then {
+    // ATTACK icon: sector can be captured by player's side
+    private _mk = createMarkerLocal [_iconMarker, _sectorPos];
+    _mk setMarkerTypeLocal "mil_destroy";
+    _mk setMarkerColorLocal "ColorRed";
+    _mk setMarkerTextLocal format ["ATK %1", _designator];
+    _mk setMarkerSizeLocal [0.7, 0.7];
 } else {
-    if (_ownerSide isEqualTo _playerSide && {!(_attackingSide isEqualTo sideUnknown)}) then {
-        // Show DEFEND icon
-        createMarkerLocal [_iconMarker, markerPos _markerName];
-        _iconMarker setMarkerTypeLocal "mil_warning";
-        _iconMarker setMarkerColorLocal "ColorRed";
-        _iconMarker setMarkerTextLocal "";
-        _iconMarker setMarkerSizeLocal [0.8, 0.8];
+    if (_ownedByPlayer && {!(_attackingSide isEqualTo sideUnknown)}) then {
+        // DEFEND icon: player's sector is under attack
+        private _mk = createMarkerLocal [_iconMarker, _sectorPos];
+        _mk setMarkerTypeLocal "mil_flag";
+        _mk setMarkerColorLocal "ColorBlue";
+        _mk setMarkerTextLocal format ["DEF %1", _designator];
+        _mk setMarkerSizeLocal [0.7, 0.7];
     };
 };
 
 // ======================================================================
-// 5. Compass marker via CompassUI module
+// 5. Compass line marker for active sectors
 // ======================================================================
-private _compassColor = _color select [0, 3]; // RGB only
-[
-    _sectorName,
-    markerPos _markerName,
-    _designator,
-    _compassColor
-] call EFUNC(CompassUI,addMarker);
+if (_isActive) then {
+    private _compassColor = if (_ownedByPlayer) then {
+        if !(_attackingSide isEqualTo sideUnknown) then {
+            [1, 0.5, 0, 1]       // Orange: under attack
+        } else {
+            _sideColor            // Own colour: secure
+        };
+    } else {
+        if (_capturableByPlayer) then {
+            [1, 0, 0, 1]         // Red: attack target
+        } else {
+            [0.6, 0.6, 0.6, 0.4] // Grey: not reachable
+        };
+    };
+
+    [
+        _sectorName,
+        _sectorPos,
+        _designator,
+        _compassColor
+    ] call EFUNC(CompassUI,addMarker);
+};
+
+// ======================================================================
+// 6. Hover tooltip: designator and full name
+// ======================================================================
+_markerName setMarkerTextLocal format ["%1 - %2", _designator, _fullName];

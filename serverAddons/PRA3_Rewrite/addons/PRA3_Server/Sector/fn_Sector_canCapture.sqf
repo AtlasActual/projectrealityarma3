@@ -3,58 +3,40 @@
     FUNC(canCapture)
 
     Description:
-        Determines whether a given side is allowed to capture a sector
-        under the Advance and Secure dependency rules.
-
-        A sector is capturable by a side when at least one of its
-        dependency sectors is currently owned by that side. Base sectors
-        (empty dependency list or containing "base") follow special
-        rules: they are always contestable by any side that does not
-        already own them.
+        Checks whether a sector is eligible for capture under the
+        Advance-and-Secure dependency rules. A sector can be captured
+        when at least one of its dependency sectors is held by a side
+        different from the sector's current owner. Sectors with no
+        dependencies are always capturable.
 
     Params:
-        _sector      - (Object) the sector logic to test
-        _attackingSide - (Side) the side attempting to capture
+        _sector - (Object) the sector logic unit
 
     Returns:
-        Boolean - true if the sector can be captured by that side
+        Boolean - true if the sector may be attacked / captured
 */
 
-params ["_sector", "_attackingSide"];
+params ["_sector"];
 
 if (isNull _sector) exitWith { false };
 
-private _ownerSide    = _sector getVariable [QGVAR(ownerSide), sideUnknown];
-private _dependencies = _sector getVariable [QGVAR(dependencies), []];
+private _ownerSide = _sector getVariable [QGVAR(ownerSide), sideUnknown];
+private _deps = _sector getVariable [QGVAR(dependencies), []];
 
-// Cannot "capture" a sector you already own
-if (_ownerSide isEqualTo _attackingSide) exitWith { false };
+// Sectors without dependencies are always contestable
+if (_deps isEqualTo []) exitWith { true };
 
-// Base sectors: capturable if no dependencies or dependency contains "base"
-if (_dependencies isEqualTo []) exitWith { true };
+private _capturable = false;
 
-private _isBaseSector = false;
-{
-    if (toLower _x isEqualTo "base") exitWith {
-        _isBaseSector = true;
-    };
-} forEach _dependencies;
-
-if (_isBaseSector) exitWith {
-    // Base sectors are always contestable by non-owners
-    true
-};
-
-// Standard AAS rule: at least one dependency must be owned by the attacker
-private _canAttack = false;
 {
     private _depSector = [_x] call FUNC(get);
     if (!isNull _depSector) then {
         private _depOwner = _depSector getVariable [QGVAR(ownerSide), sideUnknown];
-        if (_depOwner isEqualTo _attackingSide) exitWith {
-            _canAttack = true;
+        // A dependency held by a different side (and not neutral) enables capture
+        if (!(_depOwner isEqualTo sideUnknown) && {!(_depOwner isEqualTo _ownerSide)}) exitWith {
+            _capturable = true;
         };
     };
-} forEach _dependencies;
+} forEach _deps;
 
-_canAttack
+_capturable

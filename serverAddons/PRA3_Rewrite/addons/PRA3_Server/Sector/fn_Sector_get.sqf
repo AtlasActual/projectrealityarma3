@@ -3,16 +3,16 @@
     FUNC(get)
 
     Description:
-        Looks up a sector logic object by its name from the master
-        storage object. Returns objNull if not found.
+        Looks up a sector logic unit by its name from the master
+        storage object.
 
     Params:
-        _sectorName - (String) name of the sector to retrieve
+        _sectorName - (String) name of the sector (same as the marker name)
 
     Returns:
-        Object - the sector logic, or objNull
+        Object - the sector logic, or objNull if not found
 */
 
 params ["_sectorName"];
 
-GVAR(masterObj) getVariable [_sectorName, objNull]
+GVAR(masterLogic) getVariable [_sectorName, objNull]
