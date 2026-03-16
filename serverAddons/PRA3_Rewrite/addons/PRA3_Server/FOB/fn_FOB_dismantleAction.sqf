@@ -3,95 +3,75 @@
     FUNC(dismantleAction)
 
     Description:
-        Ten-second hold action for a squad leader to voluntarily dismantle
-        a friendly FOB. The player must be the group leader, alive, on
-        foot, and within 5 metres of their side's FOB. On completion
-        the "fobDismantle" event is fired on the server which removes
-        the deployment point and all linked objects.
+        10-second hold action for voluntarily removing a friendly FOB.
+        The player must be alive, on foot, and within 5 m of their own
+        FOB. On completion the deployment point is removed on the server
+        via EFUNC(Deployment,removePoint).
 
-    Parameters:
-        0: _player - the squad leader performing the dismantle (Object)
-
-    Returns: nothing
+    Execution: client only.
 */
 
-params [["_player", objNull, [objNull]]];
+if (!hasInterface) exitWith {};
+if (vehicle player != player) exitWith {};
 
-if (isNull _player || {!alive _player}) exitWith {};
-if (vehicle _player != _player) exitWith {};
-
-// Must be the group leader
-if (_player != leader group _player) exitWith {
-    systemChat "Only the squad leader can dismantle a FOB.";
-};
+private _mySide = side group player;
+private _myPos  = getPosATL player;
 
 // ======================================================================
-// Locate the nearest friendly FOB within 5 metres
+// Locate the nearest own-side FOB within 5 m
 // ======================================================================
-private _playerSide = side group _player;
-private _playerPos  = getPosATL _player;
-
-private _targetPointId = "";
+private _foundId = "";
 
 {
-    private _entry = _y;
-    private _type  = _entry getOrDefault ["type", ""];
-    private _avail = _entry getOrDefault ["availableFor", sideUnknown];
-
-    if (_type == "FOB" && {_avail isEqualTo _playerSide}) then {
-        private _fobPos = _entry getOrDefault ["position", [0, 0, 0]];
-        if (_playerPos distance2D _fobPos < 5) exitWith {
-            _targetPointId = _x;
+    private _rec = _y;
+    if (_rec getOrDefault ["type", ""] == "FOB") then {
+        private _owner = _rec getOrDefault ["availableFor", sideUnknown];
+        if (_owner isEqualTo _mySide) then {
+            if (_myPos distance2D (_rec getOrDefault ["position", [0,0,0]]) < 5) exitWith {
+                _foundId = _x;
+            };
         };
     };
 } forEach EGVAR(Deployment,pointStorage);
 
-if (_targetPointId == "") exitWith {
-    systemChat "No friendly FOB nearby.";
-};
+if (_foundId == "") exitWith { systemChat "No friendly FOB nearby."; };
 
-// ======================================================================
-// Hold action: 10-second dismantle process
-// ======================================================================
-private _holdDuration = 10;
-private _startTime    = diag_tickTime;
+// Block concurrent holds
+if (!isNil QGVAR(dismantleActive) && {GVAR(dismantleActive)}) exitWith {};
+GVAR(dismantleActive) = true;
 
-GVAR(dismantleInProgress) = true;
+private _holdSec = 10;
+private _t0      = diag_tickTime;
 
-_player playMove "AmovPercMstpSnonWnonDnon";
+player playMove "AmovPercMstpSnonWnonDnon";
 
 [{
-    params ["_args", "_pfhId"];
-    _args params ["_player", "_startTime", "_holdDuration", "_targetPointId"];
+    params ["_args", "_pfh"];
+    _args params ["_t0", "_holdSec", "_ptId"];
 
-    // Abort conditions
-    if (!alive _player
-        || {vehicle _player != _player}
-        || {_player != leader group _player}
-        || {!GVAR(dismantleInProgress)}) exitWith {
-
-        GVAR(dismantleInProgress) = false;
-        [_pfhId] call PRA3_fw_removePFH;
-        systemChat "FOB dismantle cancelled.";
-    };
-
-    private _elapsed  = diag_tickTime - _startTime;
-    private _progress = _elapsed / _holdDuration;
-
-    private _barLen  = floor (_progress * 20);
-    private _barFill = "";
-    for "_i" from 1 to _barLen do { _barFill = _barFill + "|"; };
-    hintSilent format ["Dismantling FOB [%1] %2%%", _barFill, floor (_progress * 100)];
-
-    if (_elapsed >= _holdDuration) exitWith {
-        GVAR(dismantleInProgress) = false;
-        [_pfhId] call PRA3_fw_removePFH;
+    if (!alive player || {vehicle player != player}) exitWith {
+        GVAR(dismantleActive) = false;
         hintSilent "";
-
-        // Fire the dismantle event on the server
-        ["fobDismantle", [_targetPointId]] call PRA3_fw_fireServer;
-
-        systemChat "FOB has been dismantled.";
-        diag_log format ["[PRA3 FOB] Dismantle action completed by %1 on '%2'", name _player, _targetPointId];
+        [_pfh] call PRA3_fw_removePFH;
+        systemChat "Dismantle cancelled.";
     };
-}, 0.1, [_player, _startTime, _holdDuration, _targetPointId]] call PRA3_fw_addPFH;
+
+    private _dt  = diag_tickTime - _t0;
+    private _pct = (_dt / _holdSec) min 1;
+
+    private _filled = floor (_pct * 20);
+    private _bar = "";
+    for "_j" from 1 to _filled do { _bar = _bar + "|"; };
+    hintSilent format ["Dismantling FOB  [%1] %2%%", _bar, floor (_pct * 100)];
+
+    if (_dt >= _holdSec) exitWith {
+        GVAR(dismantleActive) = false;
+        hintSilent "";
+        [_pfh] call PRA3_fw_removePFH;
+
+        // Ask the server to remove the deployment point
+        [_ptId] remoteExecCall [QEFUNC(Deployment,removePoint), 2];
+        systemChat "FOB dismantled.";
+        diag_log format ["[PRA3:FOB] Dismantle hold completed by %1 on '%2'", name player, _ptId];
+    };
+}, 0.1, [_t0, _holdSec, _foundId]] call PRA3_fw_addPFH;

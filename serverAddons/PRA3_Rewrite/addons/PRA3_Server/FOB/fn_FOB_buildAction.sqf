@@ -3,86 +3,60 @@
     FUNC(buildAction)
 
     Description:
-        Five-second hold action for placing a FOB. The player must pass
-        the canPlace check and remain on foot near the FOB supply box.
-        The canPlace result is cached and refreshed every two seconds
-        for performance. On successful completion the placement request
-        is forwarded to the server via mutex-protected remoteExecCall.
+        Begins a 5-second hold sequence for FOB construction. A per-frame
+        handler drives a progress indicator and validates the player each
+        tick. On completion the request is forwarded to the server via
+        remoteExecCall for mutex-protected execution.
 
-    Parameters:
-        0: _player - the unit performing the action (Object)
-
-    Returns: nothing
+    Execution: client only, triggered by the "Build FOB" addAction.
 */
 
-params [["_player", objNull, [objNull]]];
+if (!hasInterface) exitWith {};
 
-if (isNull _player || {!alive _player}) exitWith {};
-
-// Re-validate with the cached canPlace check
-if !(call FUNC(canPlaceCached)) exitWith {
-    systemChat "Cannot place FOB here.";
+// Immediate eligibility gate
+if !([player] call FUNC(canPlace)) exitWith {
+    systemChat "Cannot build a FOB here.";
 };
 
-// Verify the player is near a FOB supply box of their side
-private _playerSide = side group _player;
-private _boxClass   = GVAR(sideBoxMap) getOrDefault [_playerSide, ""];
-private _playerPos  = getPosATL _player;
+// Block concurrent hold actions
+if (!isNil QGVAR(buildActive) && {GVAR(buildActive)}) exitWith {};
+GVAR(buildActive) = true;
 
-private _nearBox = false;
-if (_boxClass != "") then {
-    private _nearObjects = nearestObjects [_playerPos, [_boxClass], 10];
-    _nearBox = count _nearObjects > 0;
-};
+private _holdSec = 5;
+private _t0      = diag_tickTime;
 
-if (!_nearBox) exitWith {
-    systemChat "You must be near a FOB supply box.";
-};
+// Lock the player in place during the hold
+player playMove "AmovPercMstpSnonWnonDnon";
 
-// ======================================================================
-// Hold action: 5-second progress bar
-// ======================================================================
-private _holdDuration = 5;
-private _startTime    = diag_tickTime;
-
-GVAR(buildInProgress) = true;
-
-// Disable player movement during the hold
-_player playMove "AmovPercMstpSnonWnonDnon";
-
-// Progress check PFH
 [{
-    params ["_args", "_pfhId"];
-    _args params ["_player", "_startTime", "_holdDuration"];
+    params ["_args", "_pfh"];
+    _args params ["_t0", "_holdSec"];
 
-    // Abort conditions
-    if (!alive _player
-        || {vehicle _player != _player}
-        || {!GVAR(buildInProgress)}) exitWith {
-
-        GVAR(buildInProgress) = false;
-        [_pfhId] call PRA3_fw_removePFH;
+    // Abort when the player dies, enters a vehicle, or moves too far
+    if (!alive player || {vehicle player != player}) exitWith {
+        GVAR(buildActive) = false;
+        hintSilent "";
+        [_pfh] call PRA3_fw_removePFH;
         systemChat "FOB construction cancelled.";
     };
 
-    private _elapsed  = diag_tickTime - _startTime;
-    private _progress = _elapsed / _holdDuration;
+    private _dt  = diag_tickTime - _t0;
+    private _pct = (_dt / _holdSec) min 1;
 
-    // Display progress feedback
-    private _barLen   = floor (_progress * 20);
-    private _barFill  = "";
-    for "_i" from 1 to _barLen do { _barFill = _barFill + "|"; };
-    hintSilent format ["Building FOB [%1] %2%%", _barFill, floor (_progress * 100)];
+    // Simple text-based progress feedback
+    private _filled = floor (_pct * 20);
+    private _bar = "";
+    for "_j" from 1 to _filled do { _bar = _bar + "|"; };
+    hintSilent format ["Building FOB  [%1] %2%%", _bar, floor (_pct * 100)];
 
-    // Completion
-    if (_elapsed >= _holdDuration) exitWith {
-        GVAR(buildInProgress) = false;
-        [_pfhId] call PRA3_fw_removePFH;
+    if (_dt >= _holdSec) exitWith {
+        GVAR(buildActive) = false;
         hintSilent "";
+        [_pfh] call PRA3_fw_removePFH;
 
-        // Send placement request to the server under the respawn mutex
-        ["respawn", FUNC(place), [_player], _player] call PRA3_fw_mutexLock;
+        // Forward the placement to the server
+        [player] remoteExecCall [QFUNC(place), 2];
 
-        diag_log format ["[PRA3 FOB] Build action completed by %1", name _player];
+        diag_log format ["[PRA3:FOB] Build hold completed by %1", name player];
     };
-}, 0.1, [_player, _startTime, _holdDuration]] call PRA3_fw_addPFH;
+}, 0.1, [_t0, _holdSec]] call PRA3_fw_addPFH;

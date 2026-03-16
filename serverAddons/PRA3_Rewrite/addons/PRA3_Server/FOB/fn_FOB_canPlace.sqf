@@ -3,75 +3,73 @@
     FUNC(canPlace)
 
     Description:
-        Validates whether a given player is permitted to place a FOB at
-        their current position. Checks squad leadership, on-foot status,
-        minimum distance from friendly FOBs, and maximum nearby enemy
-        presence.
+        Evaluates whether a unit satisfies every prerequisite for placing
+        a FOB at their current position.
+
+    Checks:
+        - unit is the group leader
+        - unit is on foot (not in a vehicle)
+        - no friendly FOB exists within minDistance (600 m)
+        - no more than maxEnemyToPlace (5) enemies within 50 m
 
     Parameters:
-        0: _player - the unit requesting FOB placement (Object)
+        0: _unit  — the player requesting placement  (Object)
 
     Returns:
-        Boolean - true when all placement requirements are satisfied
+        Boolean
 */
 
-params [["_player", objNull, [objNull]]];
+params [["_unit", objNull, [objNull]]];
 
-// Must be a valid, alive player
-if (isNull _player || {!alive _player}) exitWith { false };
+// Basic validity
+if (isNull _unit || {!alive _unit}) exitWith { false };
 
-// Must be the group leader
-if (_player != leader group _player) exitWith { false };
+// Must be the squad leader
+if (_unit != leader group _unit) exitWith { false };
 
-// Must be on foot (not inside any vehicle)
-if (vehicle _player != _player) exitWith { false };
+// Must be dismounted
+if (vehicle _unit != _unit) exitWith { false };
 
-private _playerSide = side group _player;
-private _playerPos  = getPosATL _player;
+private _uSide = side group _unit;
+private _uPos  = getPosATL _unit;
 
 // ======================================================================
-// Check minimum distance from all existing friendly FOBs
+// Minimum distance from existing friendly FOBs
 // ======================================================================
 private _minDist = GVAR(minDistance);
-if (_minDist <= 0) then { _minDist = 400; };
+if (_minDist <= 0) then { _minDist = 600; };
 
-private _allPoints = EGVAR(Deployment,pointStorage);
-private _tooClose  = false;
-
+private _tooClose = false;
 {
-    private _entry = _y;
-    private _type  = _entry getOrDefault ["type", ""];
-    private _avail = _entry getOrDefault ["availableFor", sideUnknown];
-
-    if (_type == "FOB" && {_avail isEqualTo _playerSide}) then {
-        private _fobPos = _entry getOrDefault ["position", [0, 0, 0]];
-        if (_playerPos distance2D _fobPos < _minDist) exitWith {
-            _tooClose = true;
+    private _rec = _y;
+    if (_rec getOrDefault ["type", ""] == "FOB") then {
+        if ((_rec getOrDefault ["availableFor", sideUnknown]) isEqualTo _uSide) then {
+            private _fPos = _rec getOrDefault ["position", [0, 0, 0]];
+            if (_uPos distance2D _fPos < _minDist) exitWith {
+                _tooClose = true;
+            };
         };
     };
-} forEach _allPoints;
+} forEach EGVAR(Deployment,pointStorage);
 
 if (_tooClose) exitWith { false };
 
 // ======================================================================
-// Check enemy count within maxEnemyDistance
+// Maximum enemy presence within 50 m
 // ======================================================================
-private _enemyDist  = GVAR(maxEnemyDistance);
-private _enemyLimit = GVAR(maxEnemyCount);
+private _maxEnemy = GVAR(maxEnemyToPlace);
+if (_maxEnemy <= 0) then { _maxEnemy = 5; };
 
-if (_enemyDist <= 0)  then { _enemyDist  = 100; };
-if (_enemyLimit <= 0) then { _enemyLimit = 2;   };
-
-private _nearUnits  = [_playerPos, _enemyDist] call PRA3_fw_getNearUnits;
+private _nearby     = [_uPos, 50] call PRA3_fw_getNearUnits;
 private _enemyCount = 0;
 
 {
-    if !(side group _x isEqualTo _playerSide) then {
+    if !(side group _x isEqualTo _uSide) then {
         _enemyCount = _enemyCount + 1;
     };
-} forEach _nearUnits;
+} forEach _nearby;
 
-if (_enemyCount >= _enemyLimit) exitWith { false };
+if (_enemyCount > _maxEnemy) exitWith { false };
 
 // All checks passed
 true

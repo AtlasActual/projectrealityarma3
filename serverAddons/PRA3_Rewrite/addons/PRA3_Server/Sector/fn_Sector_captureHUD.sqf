@@ -106,42 +106,47 @@ if (!isNil QGVAR(hudPFH)) then {
 };
 
 GVAR(hudPFH) = [{
-    params ["_sector", "_barCtrl", "_pctCtrl", "_hudX", "_hudW", "_hudY", "_hudH"];
+    params ["_args", "_pfhId"];
+    _args params ["_sector", "_barCtrl", "_pctCtrl", "_hudX", "_hudW", "_hudY", "_hudH"];
 
-    if (isNull _sector) exitWith {};
+    if (isNull _sector) exitWith {
+        [_pfhId] call PRA3_fw_removePFH;
+        GVAR(hudPFH) = nil;
+    };
 
     private _progress    = _sector getVariable [QGVAR(captureProgress), 0];
     private _ownerSide   = _sector getVariable [QGVAR(ownerSide), sideUnknown];
     private _attackSide  = _sector getVariable [QGVAR(attackingSide), sideUnknown];
 
-    // Determine bar colour based on who is making progress
-    private _barColor = if (_ownerSide isEqualTo sideUnknown) then {
-        // Capturing phase: colour by attacker
-        switch (_attackSide) do {
-            case west:        { [0.1, 0.4, 0.8, 0.85] };
-            case east:        { [0.8, 0.1, 0.1, 0.85] };
-            case independent: { [0.1, 0.7, 0.2, 0.85] };
-            default           { [0.7, 0.7, 0.7, 0.85] };
-        };
+    // Determine bar colour based on the relevant side
+    private _displaySide = if (_ownerSide isEqualTo sideUnknown) then {
+        _attackSide
     } else {
-        // Neutralising phase: colour by defender (fading away)
-        switch (_ownerSide) do {
-            case west:        { [0.1, 0.4, 0.8, 0.85] };
-            case east:        { [0.8, 0.1, 0.1, 0.85] };
-            case independent: { [0.1, 0.7, 0.2, 0.85] };
-            default           { [0.7, 0.7, 0.7, 0.85] };
-        };
+        _ownerSide
+    };
+
+    private _barColor = switch (_displaySide) do {
+        case west:        { [0.1, 0.4, 0.8, 0.85] };
+        case east:        { [0.8, 0.1, 0.1, 0.85] };
+        case independent: { [0.1, 0.7, 0.2, 0.85] };
+        default           { [0.7, 0.7, 0.7, 0.85] };
     };
 
     _barCtrl ctrlSetBackgroundColor _barColor;
 
-    // Smoothly animate the bar width
-    private _targetW = _hudW * _progress;
+    // Smoothly interpolate bar width toward target
+    private _smoothed = missionNamespace getVariable [QGVAR(hudSmoothed), _progress];
+    _smoothed = _smoothed + ((_progress - _smoothed) * 0.15);
+    missionNamespace setVariable [QGVAR(hudSmoothed), _smoothed];
+
+    private _targetW = _hudW * _smoothed;
     _barCtrl ctrlSetPosition [_hudX, _hudY + PY(0.8), _targetW, _hudH];
-    _barCtrl ctrlCommit 0.15;
+    _barCtrl ctrlCommit 0.1;
 
     // Update percentage text
-    private _pct = round (_progress * 100);
+    private _pct = round (_smoothed * 100);
     _pctCtrl ctrlSetText format ["%1%%", _pct];
 
 }, 0.1, [_sector, _bar, _pctText, _hudX, _hudW, _hudY, _hudH]] call PRA3_fw_addPFH;
+
+missionNamespace setVariable [QGVAR(hudSmoothed), _sector getVariable [QGVAR(captureProgress), 0]];

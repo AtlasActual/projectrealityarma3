@@ -15,4 +15,4 @@
 
 params ["_sectorName"];
 
-GVAR(masterLogic) getVariable [_sectorName, objNull]
+GVAR(masterObj) getVariable [_sectorName, objNull]

@@ -20,9 +20,10 @@ GVAR(currentSector) = objNull;
 // 1. Position-checking PFH (0.1s interval)
 // ======================================================================
 [{
+    params ["_args", "_pfhId"];
+
     if (isNull player) exitWith {};
 
-    private _playerPos = getPosATL player;
     private _foundSector = objNull;
 
     {
@@ -31,7 +32,7 @@ GVAR(currentSector) = objNull;
 
         if (_marker isEqualTo "") then { continue };
 
-        if (_playerPos inArea _marker) exitWith {
+        if (player inArea _marker) exitWith {
             _foundSector = _sector;
         };
     } forEach GVAR(sectorList);

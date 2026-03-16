@@ -3,272 +3,213 @@
     FUNC(serverSetup)
 
     Description:
-        Server-only FOB management. Handles destruction countdowns with
-        escalating audio cues, timer control events (start, stop,
-        continue, reset), and processes completed destructions by
-        spawning explosion effects, removing the deployment point, and
-        applying ticket penalties. Also loops ambient radio sounds
-        near active FOBs.
+        Server-only FOB lifecycle manager. Maintains a HashMap of active
+        destruction timers keyed by deployment-point ID. Provides event
+        handlers for starting, pausing, and resetting countdowns, and
+        handles the actual FOB destruction sequence (explosions, deploy
+        point removal, ticket penalty). Also plays ambient radio chatter
+        near active FOB objects.
 
-    Called once on the server during module init.
+    Execution: server only, called once during module init.
 */
 
 if (!isServer) exitWith {};
 
-// Storage for active destruction timers: pointId -> HashMap
-//   "startTime"   : diag_tickTime when the timer began
-//   "elapsed"     : seconds accumulated before any pause
-//   "paused"      : boolean
-//   "pfhId"       : per-frame handler driving the countdown
-GVAR(destructionTimers) = createHashMap;
+// ======================================================================
+// 1. Timer storage
+// ======================================================================
+// Each key is a pointId, each value is a HashMap:
+//   "startedAt"  — diag_tickTime when current run began
+//   "banked"     — seconds accumulated before any pause
+//   "paused"     — bool
+//   "pfhId"      — per-frame handler id
+//   "lastBeep"   — diag_tickTime of most recent beep
+GVAR(timers) = createHashMap;
 
-// Duration of the destruction countdown in seconds
-GVAR(destroyDuration) = 30;
+// Countdown length in seconds
+GVAR(countdownLength) = 30;
+
+// Load ticket penalty from mission config
+private _cfg = missionConfigFile >> "PRA3" >> "CfgFOB";
+GVAR(ticketPenalty) = getNumber (_cfg >> "ticketPenalty");
+if (GVAR(ticketPenalty) <= 0) then { GVAR(ticketPenalty) = 20; };
 
 // ======================================================================
-// Internal: start or resume the countdown PFH for a given point
+// 2. Internal helper — create / resume the countdown PFH
 // ======================================================================
-DFUNC(startCountdownPFH) = {
+DFUNC(launchCountdown) = {
     params ["_pointId"];
 
-    private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
-    if (count _timerData == 0) exitWith {};
+    private _td = GVAR(timers) getOrDefault [_pointId, createHashMap];
+    if (count _td == 0) exitWith {};
 
-    // Mark as running
-    _timerData set ["paused", false];
-    _timerData set ["startTime", diag_tickTime];
+    _td set ["paused", false];
+    _td set ["startedAt", diag_tickTime];
 
-    // Retrieve the deploy point position for sound effects
-    private _pointEntry = EGVAR(Deployment,pointStorage) getOrDefault [_pointId, createHashMap];
-    private _fobPos = if (count _pointEntry > 0) then {
-        _pointEntry get "position"
-    } else {
-        [0, 0, 0]
-    };
-
-    // Track the last beep time so we can control beep frequency
-    private _lastBeep = diag_tickTime;
+    // Resolve the FOB world position from the deploy-point registry
+    private _ptEntry = EGVAR(Deployment,pointStorage) getOrDefault [_pointId, createHashMap];
+    private _fobPos  = _ptEntry getOrDefault ["position", [0, 0, 0]];
 
     private _pfhId = [{
-        params ["_args", "_pfhId"];
-        _args params ["_pointId", "_fobPos"];
+        params ["_args", "_handle"];
+        _args params ["_ptId", "_pos"];
 
-        private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
+        private _td = GVAR(timers) getOrDefault [_ptId, createHashMap];
 
-        // Timer was removed externally
-        if (count _timerData == 0) exitWith {
-            [_pfhId] call PRA3_fw_removePFH;
+        // Timer was removed externally — clean up
+        if (count _td == 0) exitWith {
+            [_handle] call PRA3_fw_removePFH;
         };
 
-        // Timer is paused — skip processing
-        if (_timerData getOrDefault ["paused", false]) exitWith {};
+        // Skip processing while paused
+        if (_td getOrDefault ["paused", false]) exitWith {};
 
-        private _elapsed   = _timerData getOrDefault ["elapsed", 0];
-        private _startTime = _timerData getOrDefault ["startTime", diag_tickTime];
-        private _running   = (diag_tickTime - _startTime) + _elapsed;
+        // Compute total elapsed seconds
+        private _banked    = _td getOrDefault ["banked", 0];
+        private _started   = _td getOrDefault ["startedAt", diag_tickTime];
+        private _totalSec  = _banked + (diag_tickTime - _started);
+        private _remaining = GVAR(countdownLength) - _totalSec;
 
-        // Determine beep interval based on time remaining
-        private _remaining = GVAR(destroyDuration) - _running;
-        private _beepInterval = if (_remaining > 20) then {
-            10   // first phase: beep every 10 seconds
-        } else {
-            if (_remaining > 5) then {
-                3  // middle phase: beep every 3 seconds
-            } else {
-                0.5  // final phase: rapid beeps
-            };
+        // --- Escalating beep sounds ---
+        private _interval = if (_remaining > 20) then { 8 }
+                            else { if (_remaining > 8) then { 3 } else { 0.6 } };
+
+        private _lastBeep = _td getOrDefault ["lastBeep", 0];
+        if (diag_tickTime - _lastBeep >= _interval) then {
+            // Create a temporary invisible helper for the 3-D sound
+            private _sndHelper = createSimpleObject ["Sign_Sphere10cm_F", _pos, true];
+            _sndHelper hideObjectGlobal true;
+            [_sndHelper, "beep"] remoteExecCall ["say3D", 0];
+            // Remove helper after the sound finishes
+            [{deleteVehicle (_this select 0)}, [_sndHelper], 2.5] call PRA3_fw_addPFH;
+            _td set ["lastBeep", diag_tickTime];
         };
 
-        // Play beep sound at the FOB position at determined intervals
-        private _lastBeep = _timerData getOrDefault ["lastBeep", 0];
-        if (diag_tickTime - _lastBeep >= _beepInterval) then {
-            private _beepObj = createSimpleObject ["Sign_Sphere10cm_F", _fobPos, true];
-            _beepObj hideObjectGlobal true;
+        // --- Timer expired — destroy the FOB ---
+        if (_totalSec >= GVAR(countdownLength)) then {
+            // Mortar-style explosion effects
+            private _blastPos = _pos vectorAdd [0, 0, 0.4];
+            createVehicle ["HelicopterExploBig",   _blastPos,                     [], 0, "CAN_COLLIDE"];
+            createVehicle ["HelicopterExploSmall",  _blastPos vectorAdd [2, 3, 0], [], 0, "CAN_COLLIDE"];
+            createVehicle ["HelicopterExploSmall",  _blastPos vectorAdd [-3, 1, 0],[], 0, "CAN_COLLIDE"];
 
-            // Broadcast a warning tone to all machines near the FOB
-            [_fobPos, "beep"] remoteExecCall ["say3D", 0];
+            // Determine owning side before we remove the point
+            private _ptData   = EGVAR(Deployment,pointStorage) getOrDefault [_ptId, createHashMap];
+            private _ownSide  = _ptData getOrDefault ["availableFor", sideUnknown];
 
-            // Clean up the helper object after a short delay
-            [{
-                params ["_obj"];
-                deleteVehicle _obj;
-            }, 2, [_beepObj]] call PRA3_fw_waitAndExec;
+            // Remove the deployment point (deletes linked objects too)
+            [_ptId] call EFUNC(Deployment,removePoint);
 
-            _timerData set ["lastBeep", diag_tickTime];
-        };
-
-        // Check if timer has expired
-        if (_running >= GVAR(destroyDuration)) then {
-            // === FOB DESTRUCTION ===
-
-            // Visual explosion effects at the FOB position
-            private _explosionPos = _fobPos vectorAdd [0, 0, 0.5];
-            createVehicle ["HelicopterExploBig", _explosionPos, [], 0, "CAN_COLLIDE"];
-            createVehicle ["HelicopterExploSmall", _explosionPos vectorAdd [3, 2, 0], [], 0, "CAN_COLLIDE"];
-
-            // Retrieve the owning side before removal
-            private _pointData = EGVAR(Deployment,pointStorage) getOrDefault [_pointId, createHashMap];
-            private _owningSide = if (count _pointData > 0) then {
-                _pointData getOrDefault ["availableFor", sideUnknown]
-            } else {
-                sideUnknown
-            };
-
-            // Remove the deployment point (also deletes linked objects)
-            [_pointId] call EFUNC(Deployment,removePoint);
-
-            // Subtract ticket penalty from the owning side
-            if !(_owningSide isEqualTo sideUnknown) then {
-                [_owningSide, -(GVAR(ticketPenalty))] call EFUNC(Tickets,modify);
+            // Subtract ticket penalty
+            if !(_ownSide isEqualTo sideUnknown) then {
+                [_ownSide, -(GVAR(ticketPenalty))] call EFUNC(Tickets,modify);
                 diag_log format [
-                    "[PRA3 FOB] FOB '%1' destroyed — %2 tickets deducted from %3",
-                    _pointId, GVAR(ticketPenalty), _owningSide
+                    "[PRA3:FOB] FOB '%1' destroyed — %2 tickets from %3",
+                    _ptId, GVAR(ticketPenalty), _ownSide
                 ];
             };
 
             // Notify all machines
-            ["fobDestroyed", [_pointId, _owningSide]] call PRA3_fw_fireGlobal;
+            ["fobDestroyed", [_ptId, _ownSide]] call PRA3_fw_fireGlobal;
 
-            // Clean up the timer entry and PFH
-            GVAR(destructionTimers) deleteAt _pointId;
-            [_pfhId] call PRA3_fw_removePFH;
+            // Purge timer and PFH
+            GVAR(timers) deleteAt _ptId;
+            [_handle] call PRA3_fw_removePFH;
         };
     }, 0.25, [_pointId, _fobPos]] call PRA3_fw_addPFH;
 
-    _timerData set ["pfhId", _pfhId];
+    _td set ["pfhId", _pfhId];
 };
 
 // ======================================================================
-// Event: fobDestroyStart — enemy initiates destruction countdown
-// ======================================================================
-["fobDestroyStart", {
-    params ["_pointId"];
-
-    // Prevent duplicate timers on the same FOB
-    if (_pointId in GVAR(destructionTimers)) exitWith {
-        diag_log format ["[PRA3 FOB] Destruction timer already active for '%1'", _pointId];
-    };
-
-    private _timerData = createHashMap;
-    _timerData set ["startTime", diag_tickTime];
-    _timerData set ["elapsed", 0];
-    _timerData set ["paused", false];
-    _timerData set ["lastBeep", 0];
-
-    GVAR(destructionTimers) set [_pointId, _timerData];
-
-    // Start the countdown PFH
-    [_pointId] call FUNC(startCountdownPFH);
-
-    // Notify all players about the attack
-    ["fobUnderAttack", [_pointId]] call PRA3_fw_fireGlobal;
-
-    diag_log format ["[PRA3 FOB] Destruction countdown started for '%1'", _pointId];
-}] call PRA3_fw_addHandler;
-
-// ======================================================================
-// Event: fobDestroyStop — pause the destruction countdown
-// ======================================================================
-["fobDestroyStop", {
-    params ["_pointId"];
-
-    private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
-    if (count _timerData == 0) exitWith {};
-
-    // Record how much time has elapsed so far
-    private _startTime = _timerData getOrDefault ["startTime", diag_tickTime];
-    private _prevElapsed = _timerData getOrDefault ["elapsed", 0];
-    _timerData set ["elapsed", _prevElapsed + (diag_tickTime - _startTime)];
-    _timerData set ["paused", true];
-
-    diag_log format ["[PRA3 FOB] Destruction timer paused for '%1'", _pointId];
-}] call PRA3_fw_addHandler;
-
-// ======================================================================
-// Event: fobTimerStart — explicitly begin a fresh countdown
+// 3. Event: fobTimerStart — begin destruction countdown
 // ======================================================================
 ["fobTimerStart", {
     params ["_pointId"];
 
-    // Behaves the same as fobDestroyStart
-    ["fobDestroyStart", [_pointId]] call PRA3_fw_fireEvent;
+    // Reject duplicate timers on the same FOB
+    if (_pointId in GVAR(timers)) exitWith {
+        diag_log format ["[PRA3:FOB] Timer already running for '%1'", _pointId];
+    };
+
+    private _td = createHashMap;
+    _td set ["startedAt", diag_tickTime];
+    _td set ["banked", 0];
+    _td set ["paused", false];
+    _td set ["lastBeep", 0];
+
+    GVAR(timers) set [_pointId, _td];
+
+    [_pointId] call FUNC(launchCountdown);
+
+    // Broadcast attack warning
+    ["fobUnderAttack", [_pointId]] call PRA3_fw_fireGlobal;
+
+    diag_log format ["[PRA3:FOB] Destruction timer started for '%1'", _pointId];
 }] call PRA3_fw_addHandler;
 
 // ======================================================================
-// Event: fobTimerStop — explicitly pause the countdown
+// 4. Event: fobTimerStop — pause the countdown
 // ======================================================================
 ["fobTimerStop", {
     params ["_pointId"];
 
-    ["fobDestroyStop", [_pointId]] call PRA3_fw_fireEvent;
+    private _td = GVAR(timers) getOrDefault [_pointId, createHashMap];
+    if (count _td == 0) exitWith {};
+
+    // Bank the elapsed time so we can resume later
+    private _started = _td getOrDefault ["startedAt", diag_tickTime];
+    private _prev    = _td getOrDefault ["banked", 0];
+    _td set ["banked", _prev + (diag_tickTime - _started)];
+    _td set ["paused", true];
+
+    diag_log format ["[PRA3:FOB] Timer paused for '%1'", _pointId];
 }] call PRA3_fw_addHandler;
 
 // ======================================================================
-// Event: fobTimerContinue — resume a paused countdown
-// ======================================================================
-["fobTimerContinue", {
-    params ["_pointId"];
-
-    private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
-    if (count _timerData == 0) exitWith {};
-
-    if (_timerData getOrDefault ["paused", false]) then {
-        [_pointId] call FUNC(startCountdownPFH);
-        diag_log format ["[PRA3 FOB] Destruction timer resumed for '%1'", _pointId];
-    };
-}] call PRA3_fw_addHandler;
-
-// ======================================================================
-// Event: fobTimerReset — cancel the destruction countdown entirely
+// 5. Event: fobTimerReset — cancel countdown entirely
 // ======================================================================
 ["fobTimerReset", {
     params ["_pointId"];
 
-    private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
-    if (count _timerData == 0) exitWith {};
+    private _td = GVAR(timers) getOrDefault [_pointId, createHashMap];
+    if (count _td == 0) exitWith {};
 
-    // Stop the PFH
-    private _pfhId = _timerData getOrDefault ["pfhId", -1];
-    if (_pfhId >= 0) then {
-        [_pfhId] call PRA3_fw_removePFH;
-    };
+    // Stop the running PFH
+    private _pfh = _td getOrDefault ["pfhId", -1];
+    if (_pfh >= 0) then { [_pfh] call PRA3_fw_removePFH; };
 
-    // Purge the timer record
-    GVAR(destructionTimers) deleteAt _pointId;
+    GVAR(timers) deleteAt _pointId;
 
-    // Notify all machines that the FOB has been defused
     ["fobDefused", [_pointId]] call PRA3_fw_fireGlobal;
 
-    diag_log format ["[PRA3 FOB] Destruction timer reset (defused) for '%1'", _pointId];
+    diag_log format ["[PRA3:FOB] Timer reset (defused) for '%1'", _pointId];
 }] call PRA3_fw_addHandler;
 
 // ======================================================================
-// Event: fobDismantle — friendly removal of own FOB
+// 6. Ambient radio chatter near active FOBs (every 45–90 s)
 // ======================================================================
-["fobDismantle", {
-    params ["_pointId"];
+GVAR(nextRadioTime) = diag_tickTime + 60;
 
-    // If there is an active destruction timer, clear it first
-    private _timerData = GVAR(destructionTimers) getOrDefault [_pointId, createHashMap];
-    if (count _timerData > 0) then {
-        private _pfhId = _timerData getOrDefault ["pfhId", -1];
-        if (_pfhId >= 0) then {
-            [_pfhId] call PRA3_fw_removePFH;
+[{
+    params ["_args", "_handle"];
+
+    if (diag_tickTime < GVAR(nextRadioTime)) exitWith {};
+    GVAR(nextRadioTime) = diag_tickTime + 45 + random 45;
+
+    // Iterate every deploy point and play a radio sound at FOBs
+    {
+        private _entry = _y;
+        if (_entry getOrDefault ["type", ""] == "FOB") then {
+            private _objs = _entry getOrDefault ["objects", []];
+            if (count _objs > 0) then {
+                private _target = _objs select 0;
+                if (!isNull _target) then {
+                    [_target, "RadioAmbient"] remoteExecCall ["say3D", 0];
+                };
+            };
         };
-        GVAR(destructionTimers) deleteAt _pointId;
-    };
+    } forEach EGVAR(Deployment,pointStorage);
+}, 5, []] call PRA3_fw_addPFH;
 
-    // Remove the deployment point
-    [_pointId] call EFUNC(Deployment,removePoint);
-
-    diag_log format ["[PRA3 FOB] FOB '%1' dismantled by squad leader", _pointId];
-}] call PRA3_fw_addHandler;
-
-// ======================================================================
-// Load ticket penalty setting from config (server side)
-// ======================================================================
-private _cfgFOB = missionConfigFile >> "PRA3" >> "cfgFOB";
-GVAR(ticketPenalty) = getNumber (_cfgFOB >> "ticketPenalty");
-if (GVAR(ticketPenalty) <= 0) then { GVAR(ticketPenalty) = 20; };
-
-diag_log "[PRA3 FOB] Server setup complete.";
+diag_log "[PRA3:FOB] Server setup finished.";

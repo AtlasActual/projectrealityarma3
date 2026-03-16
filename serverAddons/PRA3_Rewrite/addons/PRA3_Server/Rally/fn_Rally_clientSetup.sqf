@@ -3,100 +3,99 @@
     FUNC(clientSetup)
 
     Description:
-        Client-side rally point module initialisation. Reads rally
-        configuration from the mission config (cooldown time, spawn
-        count, near-player thresholds), sets up a cached canPlace
-        check, and registers the "Set Rally" hold action on the player.
+        Client-side rally-point initialisation. Pulls tuning values from
+        the mission config, creates a periodically-refreshed eligibility
+        cache, and attaches a 3-second "Set Rally Point" hold action to
+        the player.
 
-    Called once on each client after mission init.
+    Execution: client only, called once after mission init.
 */
 
 if (!hasInterface) exitWith {};
 
 // ======================================================================
-// 1. Load rally point settings from mission config
+// 1. Load config from missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint"
 // ======================================================================
-private _cfgRally = missionConfigFile >> "PRA3" >> "cfgSquadRallyPoint";
+private _cfg = missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint";
 
-GVAR(cooldownTime)        = getNumber (_cfgRally >> "cooldownTime");
-GVAR(spawnCount)          = getNumber (_cfgRally >> "spawnCount");
-GVAR(nearPlayerThreshold) = getNumber (_cfgRally >> "nearPlayerThreshold");
-GVAR(nearPlayerCount)     = getNumber (_cfgRally >> "nearPlayerCount");
+GVAR(cooldownTime)    = getNumber (_cfg >> "cooldownTime");
+GVAR(spawnCount)      = getNumber (_cfg >> "spawnCount");
+GVAR(nearPlayerCount) = getNumber (_cfg >> "nearPlayerCount");
+GVAR(enemyCheckRadius)= getNumber (_cfg >> "enemyCheckRadius");
 
-// Apply sensible defaults when config values are absent or zero
-if (GVAR(cooldownTime) <= 0)        then { GVAR(cooldownTime)        = 120; };
-if (GVAR(spawnCount) <= 0)          then { GVAR(spawnCount)          = 9;   };
-if (GVAR(nearPlayerThreshold) <= 0) then { GVAR(nearPlayerThreshold) = 10;  };
-if (GVAR(nearPlayerCount) <= 0)     then { GVAR(nearPlayerCount)     = 2;   };
+if (GVAR(cooldownTime)     <= 0) then { GVAR(cooldownTime)     = 10;  };
+if (GVAR(spawnCount)       <= 0) then { GVAR(spawnCount)       = 9;   };
+if (GVAR(nearPlayerCount)  <= 0) then { GVAR(nearPlayerCount)  = 1;   };
+if (GVAR(enemyCheckRadius) <= 0) then { GVAR(enemyCheckRadius) = 50;  };
 
 diag_log format [
-    "[PRA3 Rally] Config loaded — cooldown: %1s, spawns: %2, threshold: %3m, minPlayers: %4",
-    GVAR(cooldownTime), GVAR(spawnCount), GVAR(nearPlayerThreshold), GVAR(nearPlayerCount)
+    "[PRA3:Rally] Config — cd:%1s  spawns:%2  nearPlayers:%3  enemyRad:%4",
+    GVAR(cooldownTime), GVAR(spawnCount),
+    GVAR(nearPlayerCount), GVAR(enemyCheckRadius)
 ];
 
 // ======================================================================
-// 2. Cached canPlace result (refreshed every 2 seconds)
+// 2. Cached canPlace (refreshes every 1.5 s)
 // ======================================================================
-GVAR(canPlaceCache)     = false;
-GVAR(canPlaceCacheTime) = 0;
+GVAR(canPlaceCache)      = false;
+GVAR(canPlaceCacheExpiry) = 0;
 
 DFUNC(canPlaceCached) = {
-    if (diag_tickTime > GVAR(canPlaceCacheTime)) then {
-        GVAR(canPlaceCache)     = [player] call FUNC(canPlace);
-        GVAR(canPlaceCacheTime) = diag_tickTime + 2;
+    if (diag_tickTime > GVAR(canPlaceCacheExpiry)) then {
+        GVAR(canPlaceCache)      = [player] call FUNC(canPlace);
+        GVAR(canPlaceCacheExpiry) = diag_tickTime + 1.5;
     };
     GVAR(canPlaceCache)
 };
 
 // ======================================================================
-// 3. Register "Set Rally" hold action on the player
+// 3. Hold-action: Set Rally Point (3 s)
 // ======================================================================
-GVAR(rallyActionId) = player addAction [
+player addAction [
     "<t color='#2196F3'>Set Rally Point</t>",
     {
-        params ["_target", "_caller"];
+        // Immediate re-check
+        if !([player] call FUNC(canPlace)) exitWith {
+            systemChat "Cannot set rally here.";
+        };
 
-        // Five-second hold action implemented via PFH
-        private _holdDuration = 5;
-        private _startTime    = diag_tickTime;
+        if (!isNil QGVAR(setActive) && {GVAR(setActive)}) exitWith {};
+        GVAR(setActive) = true;
 
-        GVAR(rallyInProgress) = true;
+        private _holdSec = 3;
+        private _t0      = diag_tickTime;
 
-        _caller playMove "AmovPercMstpSnonWnonDnon";
+        player playMove "AmovPercMstpSnonWnonDnon";
 
         [{
-            params ["_args", "_pfhId"];
-            _args params ["_caller", "_startTime", "_holdDuration"];
+            params ["_args", "_pfh"];
+            _args params ["_t0", "_holdSec"];
 
-            // Abort conditions
-            if (!alive _caller
-                || {vehicle _caller != _caller}
-                || {!GVAR(rallyInProgress)}) exitWith {
-
-                GVAR(rallyInProgress) = false;
-                [_pfhId] call PRA3_fw_removePFH;
-                systemChat "Rally placement cancelled.";
-            };
-
-            private _elapsed  = diag_tickTime - _startTime;
-            private _progress = _elapsed / _holdDuration;
-
-            private _barLen  = floor (_progress * 20);
-            private _barFill = "";
-            for "_i" from 1 to _barLen do { _barFill = _barFill + "|"; };
-            hintSilent format ["Setting Rally [%1] %2%%", _barFill, floor (_progress * 100)];
-
-            if (_elapsed >= _holdDuration) exitWith {
-                GVAR(rallyInProgress) = false;
-                [_pfhId] call PRA3_fw_removePFH;
+            if (!alive player || {vehicle player != player}) exitWith {
+                GVAR(setActive) = false;
                 hintSilent "";
-
-                // Forward the placement to the server under the respawn mutex
-                ["respawn", FUNC(place), [_caller], _caller] call PRA3_fw_mutexLock;
-
-                diag_log format ["[PRA3 Rally] Set rally action completed by %1", name _caller];
+                [_pfh] call PRA3_fw_removePFH;
+                systemChat "Rally placement interrupted.";
             };
-        }, 0.1, [_caller, _startTime, _holdDuration]] call PRA3_fw_addPFH;
+
+            private _dt  = diag_tickTime - _t0;
+            private _pct = (_dt / _holdSec) min 1;
+
+            private _filled = floor (_pct * 20);
+            private _bar = "";
+            for "_j" from 1 to _filled do { _bar = _bar + "|"; };
+            hintSilent format ["Setting Rally  [%1] %2%%", _bar, floor (_pct * 100)];
+
+            if (_dt >= _holdSec) exitWith {
+                GVAR(setActive) = false;
+                hintSilent "";
+                [_pfh] call PRA3_fw_removePFH;
+
+                // Forward placement to the server
+                [player] remoteExecCall [QFUNC(place), 2];
+                diag_log format ["[PRA3:Rally] Set rally hold done by %1", name player];
+            };
+        }, 0.1, [_t0, _holdSec]] call PRA3_fw_addPFH;
     },
     nil,
     6,
@@ -107,25 +106,21 @@ GVAR(rallyActionId) = player addAction [
 ];
 
 // ======================================================================
-// 4. Listen for rally placement notifications
+// 4. Notification listeners
 // ======================================================================
-["rallyPlaced", {
-    systemChat "Squad rally point has been set.";
+["rallySet", {
+    params ["_locName"];
+    systemChat format ["Rally point set near %1.", _locName];
 }] call PRA3_fw_addHandler;
 
-// ======================================================================
-// 5. Listen for rally destruction notifications
-// ======================================================================
-["rallyDestroyed", {
-    params ["_reason"];
-
-    private _msg = switch (_reason) do {
-        case "enemy":  { "Rally point overrun by enemies!" };
-        case "empty":  { "Rally point lost — squad disbanded." };
-        default        { "Rally point has been destroyed." };
+["rallyLost", {
+    params [["_reason", "unknown"]];
+    private _txt = switch (_reason) do {
+        case "enemy":    { "Rally overrun by enemies!" };
+        case "disbanded": { "Rally lost — squad disbanded." };
+        default          { "Rally point destroyed." };
     };
-
-    systemChat _msg;
+    systemChat _txt;
 }] call PRA3_fw_addHandler;
 
-diag_log "[PRA3 Rally] Client setup complete.";
+diag_log "[PRA3:Rally] Client setup finished.";
