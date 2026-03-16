@@ -32,7 +32,7 @@ GVAR(defaultCargoCapacity) = 4;
 
     // Check if the entity class has a cargo capacity defined in mission config
     private _entityType = typeOf _entity;
-    private _cfgSides   = missionConfigFile >> "PRA3" >> "Sides";
+    private _cfgSides   = missionConfigFile >> "PRA3" >> "Factions";
 
     private _hasCargo = false;
     private _capacity = 0;
@@ -42,7 +42,7 @@ GVAR(defaultCargoCapacity) = 4;
             private _sideCfg = _cfgSides select _i;
             if (!isClass _sideCfg) then { continue };
 
-            private _logCfg = _sideCfg >> "CfgLogistic" >> "CargoVehicles" >> _entityType;
+            private _logCfg = _sideCfg >> "SupplySetup" >> "CargoVehicles" >> _entityType;
             if (!isNull _logCfg) exitWith {
                 _hasCargo = true;
                 _capacity = getNumber (_logCfg >> "capacity");
@@ -60,7 +60,7 @@ GVAR(defaultCargoCapacity) = 4;
                 private _sideCfg = _cfgSides select _i;
                 if (!isClass _sideCfg) then { continue };
 
-                private _cargoArr = getArray (_sideCfg >> "CfgLogistic" >> "cargoClasses");
+                private _cargoArr = getArray (_sideCfg >> "SupplySetup" >> "cargoClasses");
                 {
                     if (_entity isKindOf _x) exitWith {
                         _hasCargo = true;

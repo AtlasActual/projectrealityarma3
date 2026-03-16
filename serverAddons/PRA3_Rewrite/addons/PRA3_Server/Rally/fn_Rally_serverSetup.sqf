@@ -18,7 +18,7 @@ if (!isServer) exitWith {};
 // ======================================================================
 GVAR(liveRallies) = [];
 
-private _cfg = missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint";
+private _cfg = missionConfigFile >> "PRA3" >> "RallyConfig";
 
 GVAR(enemyScanRange) = getNumber (_cfg >> "enemyScanRange");
 GVAR(enemyScanLimit) = getNumber (_cfg >> "enemyScanLimit");

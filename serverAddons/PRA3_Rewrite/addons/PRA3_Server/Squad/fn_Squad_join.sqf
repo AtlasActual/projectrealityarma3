@@ -19,7 +19,7 @@ params ["_targetGroup"];
 
     // Retrieve the group type to determine max capacity
     private _groupType = _targetGroup getVariable [QGVAR(type), "infantry"];
-    private _typeCfg = missionConfigFile >> "PRA3" >> "CfgGroupTypes" >> _groupType;
+    private _typeCfg = missionConfigFile >> "PRA3" >> "TeamRoles" >> _groupType;
 
     private _maxMembers = getNumber (_typeCfg >> "maxMembers");
     if (_maxMembers isEqualTo 0) then {

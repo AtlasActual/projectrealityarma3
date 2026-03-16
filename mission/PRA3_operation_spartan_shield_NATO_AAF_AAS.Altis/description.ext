@@ -27,48 +27,27 @@ respawnDialog = 0;
 
 disableChannels[] = {{0, "false", "true"}, {1, "false", "true"}};
 
-class CLib {
-    class GarbageCollector {
-        EnableGarbageCollector = 1;
-        GarbageCollectorTime = 120;
-    };
-    Modules[] = {
-        "PRA3/Nametags",
-        "PRA3/CompassUI",
-        "PRA3/GarbageCollector",
-        "PRA3/Logistic",
-        "PRA3/RespawnUI",
-        "PRA3/Revive",
-        "PRA3/Tickets",
-        "PRA3/UnitTracker",
-        "PRA3/VehicleRespawn",
-        "PRA3/FOB",
-        "PRA3/Rally"
-    };
-    useExperimentalAutoload = 0;
-    useCompressedFunction = 0;
-    useFallbackRemoteExecution = 0;
-};
+// CLib dependency removed — PRA3 now uses native CfgFunctions autoloading
 
 class PRA3 {
 
-    #include "cfgBaseSettings.hpp"
+    #include "gameRules.hpp"
 
-    #include "cfgGroupTypes.hpp"
+    #include "teamRoles.hpp"
 
-    #include "cfgSides.hpp"
+    #include "factions.hpp"
 
-    #include "cfgSquadRallyPoint.hpp"
+    #include "rallyConfig.hpp"
 
-    #include "cfgSectors.hpp"
+    #include "objectiveZones.hpp"
 
-    #include "cfgRespawn.hpp"
+    #include "spawnRules.hpp"
 
-    #include "cfgRevive.hpp"
+    #include "medicRules.hpp"
 
-    #include "cfgEntities.hpp"
+    #include "assetPool.hpp"
 
-  	#include "cfgFOB.hpp"
+  	#include "baseConfig.hpp"
 
     #include "ui\common\pra3Core.hpp"
 
@@ -90,7 +69,6 @@ class RscTitles {
     #include "ui\hud\PerformanceStatus.hpp"
 };
 
-/* disable CfgRemoteExec Until BI fix it
 class CfgRemoteExec {
     class Functions {
         mode = 1; // only whitelisted functions/commands are allowed for remote execution
@@ -105,4 +83,3 @@ class CfgRemoteExec {
         };
     };
 };
-*/

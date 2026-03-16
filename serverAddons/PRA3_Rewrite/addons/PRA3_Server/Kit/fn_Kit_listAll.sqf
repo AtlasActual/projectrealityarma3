@@ -4,7 +4,7 @@
 
     Description:
         Returns an array of all kit config entries for the given side.
-        Reads from missionConfigFile >> "PRA3" >> "Sides" >> str(side) >> "kits".
+        Reads from missionConfigFile >> "PRA3" >> "Factions" >> str(side) >> "kits".
         Each entry is [className, configPath].
 
     Params:
@@ -17,7 +17,7 @@
 params ["_side"];
 
 private _sideStr = str _side;
-private _kitsRoot = missionConfigFile >> "PRA3" >> "Sides" >> _sideStr >> "kits";
+private _kitsRoot = missionConfigFile >> "PRA3" >> "Factions" >> _sideStr >> "kits";
 private _result = [];
 
 if (!isClass _kitsRoot) exitWith {

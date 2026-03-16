@@ -14,9 +14,9 @@
 if (!hasInterface) exitWith {};
 
 // ======================================================================
-// 1. Load config from missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint"
+// 1. Load config from missionConfigFile >> "PRA3" >> "RallyConfig"
 // ======================================================================
-private _cfg = missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint";
+private _cfg = missionConfigFile >> "PRA3" >> "RallyConfig";
 
 GVAR(cooldownTime)    = getNumber (_cfg >> "cooldownTime");
 GVAR(spawnCount)      = getNumber (_cfg >> "spawnCount");

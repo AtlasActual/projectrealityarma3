@@ -30,7 +30,7 @@ GVAR(timers) = createHashMap;
 GVAR(countdownLength) = 30;
 
 // Load ticket penalty from mission config
-private _cfg = missionConfigFile >> "PRA3" >> "CfgFOB";
+private _cfg = missionConfigFile >> "PRA3" >> "BaseConfig";
 GVAR(ticketPenalty) = getNumber (_cfg >> "ticketPenalty");
 if (GVAR(ticketPenalty) <= 0) then { GVAR(ticketPenalty) = 20; };
 

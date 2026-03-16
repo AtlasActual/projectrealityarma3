@@ -4,7 +4,7 @@
 
     Description:
         Transfers a player to a new side. Reads the appropriate unit class
-        from missionConfigFile >> "PRA3" >> "Sides" >> str(_targetSide),
+        from missionConfigFile >> "PRA3" >> "Factions" >> str(_targetSide),
         spawns a fresh unit of that class in a dedicated group, copies
         every non-engine variable, re-attaches triggers, preserves the
         vehicleVarName, hands player control to the new unit, fires the
@@ -21,7 +21,7 @@
 params ["_unit", "_targetSide"];
 
 // ---- 1. Resolve class from mission config ----
-private _sideConfig = missionConfigFile >> "PRA3" >> "Sides" >> str _targetSide;
+private _sideConfig = missionConfigFile >> "PRA3" >> "Factions" >> str _targetSide;
 private _unitClass  = getText (_sideConfig >> "playerClass");
 
 if (_unitClass isEqualTo "") exitWith {

@@ -17,7 +17,7 @@
 params ["_typeName"];
 
 // Read type configuration from mission config
-private _typeCfg = missionConfigFile >> "PRA3" >> "CfgGroupTypes" >> _typeName;
+private _typeCfg = missionConfigFile >> "PRA3" >> "TeamRoles" >> _typeName;
 
 if (isNull _typeCfg) exitWith {
     diag_log format [

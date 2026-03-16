@@ -27,14 +27,14 @@ GVAR(draggableClasses) = [];
 GVAR(cargoClasses)     = [];
 GVAR(crateDefinitions) = createHashMap;
 
-private _cfgSides = missionConfigFile >> "PRA3" >> "Sides";
+private _cfgSides = missionConfigFile >> "PRA3" >> "Factions";
 
 if (!isNull _cfgSides) then {
     for "_i" from 0 to (count _cfgSides - 1) do {
         private _sideCfg = _cfgSides select _i;
         if (!isClass _sideCfg) then { continue };
 
-        private _logCfg = _sideCfg >> "CfgLogistic";
+        private _logCfg = _sideCfg >> "SupplySetup";
         if (isNull _logCfg) then { continue };
 
         // Parse draggable classes
@@ -94,7 +94,7 @@ private _playerSideName = switch (playerSide) do {
 };
 
 if (_playerSideName != "") then {
-    private _spawnCfg = missionConfigFile >> "PRA3" >> "Sides" >> _playerSideName >> "CfgLogistic";
+    private _spawnCfg = missionConfigFile >> "PRA3" >> "Factions" >> _playerSideName >> "SupplySetup";
 
     if (!isNull _spawnCfg) then {
         private _spawnerClasses = getArray (_spawnCfg >> "crateSpawnerClasses");

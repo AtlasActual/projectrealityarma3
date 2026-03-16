@@ -35,7 +35,7 @@ if (_sideStr == "") exitWith {
     objNull
 };
 
-private _crateCfg = missionConfigFile >> "PRA3" >> "Sides" >> _sideStr >> "CfgLogistic" >> "Crates" >> _crateClassName;
+private _crateCfg = missionConfigFile >> "PRA3" >> "Factions" >> _sideStr >> "SupplySetup" >> "Crates" >> _crateClassName;
 
 if (isNull _crateCfg) exitWith {
     diag_log format [

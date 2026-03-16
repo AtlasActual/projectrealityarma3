@@ -5,7 +5,7 @@
     Description:
         Server-side handler that subscribes to the "entityCreated" event.
         For every newly created entity it resolves the entity's type against
-        missionConfigFile >> "PRA3" >> "CfgEntities", traverses the full
+        missionConfigFile >> "PRA3" >> "AssetPool", traverses the full
         config inheritance tree from the most derived class upward, and
         applies every discovered property as a public variable on the entity.
         Child-class properties take precedence over identically named
@@ -23,7 +23,7 @@ if (!isServer) exitWith {};
     if (isNull _entity) exitWith {};
 
     private _className = typeOf _entity;
-    private _cfgBase = missionConfigFile >> "PRA3" >> "CfgEntities";
+    private _cfgBase = missionConfigFile >> "PRA3" >> "AssetPool";
     private _classEntry = _cfgBase >> _className;
 
     // Bail out when the entity type has no config definition

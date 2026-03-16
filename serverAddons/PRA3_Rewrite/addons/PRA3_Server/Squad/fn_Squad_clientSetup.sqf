@@ -16,7 +16,7 @@ if (!hasInterface) exitWith {};
 // ======================================================================
 // 1. Load group type configuration from mission config
 // ======================================================================
-[QGVAR(groupTypes), "PRA3 >> CfgGroupTypes"] call PRA3_fw_loadSettings;
+[QGVAR(groupTypes), "PRA3 >> TeamRoles"] call PRA3_fw_loadSettings;
 
 diag_log format [
     "[PRA3 Squad] Group type settings loaded: %1 types",

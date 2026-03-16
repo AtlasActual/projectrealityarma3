@@ -147,7 +147,7 @@ if (!hasInterface) exitWith {};
     lbClear _comboCtrl;
 
     private _validTypes = [];
-    private _cfgRoot = missionConfigFile >> "PRA3" >> "GroupTypes";
+    private _cfgRoot = missionConfigFile >> "PRA3" >> "TeamRoles";
 
     for "_i" from 0 to (count _cfgRoot - 1) do {
         private _entry = _cfgRoot select _i;
@@ -235,7 +235,7 @@ if (!hasInterface) exitWith {};
         private _grpType = _grp getVariable [QEGVAR(Squad,Type), ""];
 
         // Read type display name and max size from config
-        private _typeCfg = missionConfigFile >> "PRA3" >> "GroupTypes" >> _grpType;
+        private _typeCfg = missionConfigFile >> "PRA3" >> "TeamRoles" >> _grpType;
         private _typeName = if (isClass _typeCfg) then {
             getText (_typeCfg >> "displayName")
         } else {
@@ -357,7 +357,7 @@ if (!hasInterface) exitWith {};
     } else {
         // Show JOIN only if the squad is not full
         private _grpType = _grpObj getVariable [QEGVAR(Squad,Type), ""];
-        private _typeCfg = missionConfigFile >> "PRA3" >> "GroupTypes" >> _grpType;
+        private _typeCfg = missionConfigFile >> "PRA3" >> "TeamRoles" >> _grpType;
         private _maxSize = if (isClass _typeCfg) then {
             getNumber (_typeCfg >> "groupSize")
         } else {

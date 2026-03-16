@@ -16,9 +16,9 @@
 if (!hasInterface) exitWith {};
 
 // ======================================================================
-// 1. Read tuning parameters from missionConfigFile >> "PRA3" >> "CfgFOB"
+// 1. Read tuning parameters from missionConfigFile >> "PRA3" >> "BaseConfig"
 // ======================================================================
-private _cfg = missionConfigFile >> "PRA3" >> "CfgFOB";
+private _cfg = missionConfigFile >> "PRA3" >> "BaseConfig";
 
 GVAR(minDistance)       = getNumber (_cfg >> "minDistance");
 GVAR(maxEnemyToPlace)   = getNumber (_cfg >> "maxEnemyToPlace");
@@ -39,7 +39,7 @@ diag_log format [
 // ======================================================================
 GVAR(sideData) = createHashMap;
 
-private _cfgSides = missionConfigFile >> "PRA3" >> "Sides";
+private _cfgSides = missionConfigFile >> "PRA3" >> "Factions";
 if (!isNull _cfgSides) then {
     for "_idx" from 0 to (count _cfgSides - 1) do {
         private _entry = _cfgSides select _idx;

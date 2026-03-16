@@ -16,7 +16,7 @@ if (!hasInterface) exitWith {};
 // ======================================================================
 // 1. Read revive configuration from mission config
 // ======================================================================
-private _reviveCfg = missionConfigFile >> "PRA3" >> "Revive";
+private _reviveCfg = missionConfigFile >> "PRA3" >> "MedicRules";
 
 GVAR(unconsciousDuration)  = getNumber (_reviveCfg >> "unconsciousDuration");
 GVAR(healActionDuration)   = getNumber (_reviveCfg >> "healActionDuration");

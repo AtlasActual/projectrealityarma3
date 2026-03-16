@@ -25,14 +25,14 @@ if (!isServer) exitWith {};
         GVAR(activePFHs) = createHashMap;
         GVAR(sectorUnits) = createHashMap;
 
-        diag_log "[PRA3 Sector] Server setup: reading CfgSectors.";
+        diag_log "[PRA3 Sector] Server setup: reading ObjectiveZones.";
 
         // ==============================================================
         // 2. Read sector config from mission file
         // ==============================================================
-        private _cfgRoot = missionConfigFile >> "PRA3" >> "CfgSectors";
+        private _cfgRoot = missionConfigFile >> "PRA3" >> "ObjectiveZones";
         if (isNull _cfgRoot) exitWith {
-            diag_log "[PRA3 Sector] ERROR: missionConfigFile >> PRA3 >> CfgSectors not found.";
+            diag_log "[PRA3 Sector] ERROR: missionConfigFile >> PRA3 >> ObjectiveZones not found.";
         };
 
         // Separate base paths from regular sector paths

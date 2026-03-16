@@ -14,7 +14,7 @@
 // ======================================================================
 // 1. Read scoring configuration from mission config
 // ======================================================================
-private _cfgRoot = missionConfigFile >> "PRA3";
+private _cfgRoot = missionConfigFile >> "PRA3" >> "GameRules";
 
 GVAR(startingTickets)    = getNumber (_cfgRoot >> "tickets");
 GVAR(ticketBleedInterval) = getArray (_cfgRoot >> "ticketBleed") param [0, 30];

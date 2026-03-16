@@ -73,7 +73,7 @@ _objs pushBack _mkr;
 // ======================================================================
 // 4. Read spawn ticket count
 // ======================================================================
-private _cfg   = missionConfigFile >> "PRA3" >> "CfgSquadRallyPoint";
+private _cfg   = missionConfigFile >> "PRA3" >> "RallyConfig";
 private _tix   = getNumber (_cfg >> "spawnCount");
 if (_tix <= 0) then { _tix = 9; };
 
