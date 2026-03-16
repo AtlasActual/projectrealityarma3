@@ -169,20 +169,8 @@ addMissionEventHandler ["Draw3D", {
         };
 
         // --- Microphone speaking indicator ---
-        private _isSpeaking = false;
-        if (isMultiplayer) then {
-            // Check all voice channels for speaking status
-            {
-                if (_unit getVariable ["isSpeaking_" + str _x, false]) then {
-                    _isSpeaking = true;
-                };
-            } forEach [0, 1, 2, 3, 4, 5];
-
-            // Fallback: acctime-based detection via engine
-            if (!_isSpeaking) then {
-                _isSpeaking = isSpeaking _unit;
-            };
-        };
+        // Check via unit variable (can be set by TFAR/ACRE or custom VON handler)
+        private _isSpeaking = _unit getVariable ["PRA3_isSpeaking", false];
 
         if (_isSpeaking) then {
             private _micPos = _headPos vectorAdd [0, 0, 0.25];

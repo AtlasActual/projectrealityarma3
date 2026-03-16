@@ -30,7 +30,7 @@ private _output = _unit;
 if (!alive _unit) then {
     // Drop the respawn delay so the engine creates a replacement unit
     // on the very next tick
-    _unit setPlayerRespawnTime 0;
+    setPlayerRespawnTime 0;
 
     private _previousUnit = _unit;
 
