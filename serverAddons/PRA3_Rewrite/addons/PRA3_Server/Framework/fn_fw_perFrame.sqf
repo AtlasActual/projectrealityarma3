@@ -36,7 +36,7 @@ addMissionEventHandler ["EachFrame", {
         switch (_type) do {
             case "pfh": {
                 if (_tick >= _nextRun) then {
-                    _args call _code;
+                    [_args, _id] call _code;
                     // Schedule next run
                     if (_interval > 0) then {
                         _entry set [3, _tick + _interval];
@@ -102,7 +102,7 @@ GVAR(addPFH) = {
 //   Params: [id]
 // ------------------------------------------------------------------
 GVAR(removePFH) = {
-    params ["_id"];
+    private _id = if (_this isEqualType []) then { _this select 0 } else { _this };
 
     GVAR(pfhRegistry) deleteAt _id;
 };
@@ -148,7 +148,7 @@ GVAR(waitAndExec) = {
 //   once and auto-removes.
 // ------------------------------------------------------------------
 GVAR(waitUntilExec) = {
-    params ["_code", "_condCode", ["_args", []]];
+    params ["_condCode", "_code", ["_args", []]];
 
     private _id = GVAR(pfhNextId);
     GVAR(pfhNextId) = _id + 1;

@@ -46,7 +46,7 @@ if (!alive _unit) then {
         _freshUnit setPosATL _targetPos;
 
         if (_hideUnit) then {
-            _freshUnit enableSimulation false;
+            _freshUnit enableSimulationGlobal false;
             _freshUnit hideObjectGlobal true;
         };
 

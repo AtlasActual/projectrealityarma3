@@ -20,6 +20,8 @@
 
 params ["_unit", "_targetSide"];
 
+if (!hasInterface) exitWith { objNull };
+
 // ---- 1. Resolve class from mission config ----
 private _sideConfig = missionConfigFile >> "PRA3" >> "Factions" >> str _targetSide;
 private _unitClass  = getText (_sideConfig >> "playerClass");

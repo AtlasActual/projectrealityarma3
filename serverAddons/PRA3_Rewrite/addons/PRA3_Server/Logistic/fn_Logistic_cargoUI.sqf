@@ -168,8 +168,8 @@ GVAR(cargoUIPFH) = [{
                 ];
                 private _safePos = [_dropPos, 10] call PRA3_fw_safePos;
 
-                _cargoObj hideObjectGlobal false;
-                _cargoObj enableSimulationGlobal true;
+                [_cargoObj, false] remoteExec ["hideObjectGlobal", 2];
+                [_cargoObj, true] remoteExec ["enableSimulationGlobal", 2];
                 _cargoObj setPosATL [_safePos select 0, _safePos select 1, 0];
 
                 systemChat format ["Unloaded %1.", typeOf _cargoObj];

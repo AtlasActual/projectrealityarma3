@@ -16,11 +16,16 @@
 //   Returns: a new state machine HashMap
 // ------------------------------------------------------------------
 GVAR(createSM) = {
+    params [["_name", ""], ["_defaultInterval", 0]];
+
     private _sm = createHashMap;
+    _sm set ["name", _name];
     _sm set ["states", createHashMap];
     _sm set ["current", ""];
     _sm set ["args", []];
     _sm set ["pfhId", -1];
+    _sm set ["defaultInterval", _defaultInterval];
+    _sm set ["entryDone", false];
     _sm
 };
 
@@ -31,10 +36,21 @@ GVAR(createSM) = {
 //   a nextState string or [nextState, newArgs].
 // ------------------------------------------------------------------
 GVAR(addState) = {
-    params ["_sm", "_stateName", "_stateCode"];
-
-    private _states = _sm get "states";
-    _states set [_stateName, _stateCode];
+    if (count _this >= 5) then {
+        // 5-arg form: [sm, stateName, entryCode, tickCode, exitCode]
+        params ["_sm", "_stateName", "_entryCode", "_tickCode", "_exitCode"];
+        private _states = _sm get "states";
+        _states set [_stateName, createHashMapFromArray [
+            ["entry", _entryCode],
+            ["tick", _tickCode],
+            ["exit", _exitCode]
+        ]];
+    } else {
+        // 3-arg form: [sm, stateName, singleCode]
+        params ["_sm", "_stateName", "_stateCode"];
+        private _states = _sm get "states";
+        _states set [_stateName, _stateCode];
+    };
 };
 
 // ------------------------------------------------------------------
@@ -44,37 +60,80 @@ GVAR(addState) = {
 //   evaluates the current state each tick.
 // ------------------------------------------------------------------
 GVAR(startSM) = {
-    params ["_sm", "_initialState", ["_interval", 0]];
+    params ["_sm", "_initialState", ["_interval", -1]];
+
+    // Use default interval from createSM if not specified
+    if (_interval < 0) then {
+        _interval = _sm getOrDefault ["defaultInterval", 0];
+    };
 
     _sm set ["current", _initialState];
+    _sm set ["entryDone", false];
 
     private _pfhId = [
         {
-            params ["_smRef"];
+            params ["_args", "_pfhId"];
+            _args params ["_smRef"];
 
             private _curState = _smRef get "current";
             if (_curState isEqualTo "") exitWith {};
 
             private _states = _smRef get "states";
-            private _stateCode = _states getOrDefault [_curState, {}];
+            private _stateData = _states getOrDefault [_curState, {}];
 
-            if (_stateCode isEqualTo {}) exitWith {
+            if (_stateData isEqualTo {}) exitWith {
                 diag_log format ["[PRA3] SM warning: state '%1' has no handler", _curState];
             };
 
             private _smArgs = _smRef get "args";
-            private _result = [_smArgs, _curState, _smRef] call _stateCode;
+            private _result = nil;
 
-            // Interpret result: string or [string, args]
-            if (_result isEqualType "") then {
-                if (_result isNotEqualTo _curState) then {
-                    _smRef set ["current", _result];
+            // Handle both simple code blocks (3-arg addState) and
+            // entry/tick/exit hashmaps (5-arg addState)
+            if (_stateData isEqualType createHashMap) then {
+                // 5-arg form: hashmap with entry/tick/exit
+                if !(_smRef getOrDefault ["entryDone", false]) then {
+                    private _entryCode = _stateData getOrDefault ["entry", {}];
+                    if !(_entryCode isEqualTo {}) then {
+                        [_smArgs, _curState, _smRef] call _entryCode;
+                    };
+                    _smRef set ["entryDone", true];
+                };
+                private _tickCode = _stateData getOrDefault ["tick", {}];
+                if !(_tickCode isEqualTo {}) then {
+                    _result = [_smArgs, _curState, _smRef] call _tickCode;
                 };
             } else {
-                if (_result isEqualType []) then {
-                    _result params [["_nextState", _curState], ["_nextArgs", _smArgs]];
+                // 3-arg form: single code block
+                _result = [_smArgs, _curState, _smRef] call _stateData;
+            };
+
+            // Interpret result: string or [string, args]
+            if (!isNil "_result") then {
+                private _nextState = "";
+                private _nextArgs = _smArgs;
+
+                if (_result isEqualType "") then {
+                    _nextState = _result;
+                } else {
+                    if (_result isEqualType []) then {
+                        _result params [["_ns", _curState], ["_na", _smArgs]];
+                        _nextState = _ns;
+                        _nextArgs = _na;
+                    };
+                };
+
+                if (_nextState isNotEqualTo "" && {_nextState isNotEqualTo _curState}) then {
+                    // Call exit code of current state if it's a hashmap
+                    if (_stateData isEqualType createHashMap) then {
+                        private _exitCode = _stateData getOrDefault ["exit", {}];
+                        if !(_exitCode isEqualTo {}) then {
+                            [_smArgs, _curState, _smRef] call _exitCode;
+                        };
+                    };
                     _smRef set ["current", _nextState];
                     _smRef set ["args", _nextArgs];
+                    _smRef set ["entryDone", false];
                 };
             };
         },

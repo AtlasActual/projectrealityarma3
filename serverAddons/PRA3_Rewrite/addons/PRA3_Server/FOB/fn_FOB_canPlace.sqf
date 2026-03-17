@@ -36,7 +36,7 @@ private _uPos  = getPosATL _unit;
 // ======================================================================
 // Minimum distance from existing friendly FOBs
 // ======================================================================
-private _minDist = GVAR(minDistance);
+private _minDist = if (isNil QGVAR(minDistance)) then { 600 } else { GVAR(minDistance) };
 if (_minDist <= 0) then { _minDist = 600; };
 
 private _tooClose = false;
@@ -57,7 +57,7 @@ if (_tooClose) exitWith { false };
 // ======================================================================
 // Maximum enemy presence within 50 m
 // ======================================================================
-private _maxEnemy = GVAR(maxEnemyToPlace);
+private _maxEnemy = if (isNil QGVAR(maxEnemyToPlace)) then { 5 } else { GVAR(maxEnemyToPlace) };
 if (_maxEnemy <= 0) then { _maxEnemy = 5; };
 
 private _nearby     = [_uPos, 50] call PRA3_fw_getNearUnits;

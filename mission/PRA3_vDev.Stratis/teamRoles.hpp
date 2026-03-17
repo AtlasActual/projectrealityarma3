@@ -51,9 +51,9 @@ class EquipmentTiers {
         requiredGroupMembersPerKit = 1;
     };
     class Limited {
-        requiredGroupMembersPerKit = 1;
+        requiredGroupMembersPerKit = 3;
     };
     class Specialized {
-        requiredGroupMembersPerKit = 1;
+        requiredGroupMembersPerKit = 4;
     };
 };

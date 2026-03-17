@@ -45,13 +45,21 @@ if (_unit isEqualTo player) then {
     };
 };
 
-// ======================================================================
-// 4. Drop weapon
-// ======================================================================
-_unit action ["DropWeapon", _unit, currentWeapon _unit];
+// Safety net: if unit remains unconscious for >300s, force-kill and restore input
+_unit spawn {
+    private _timeout = diag_tickTime + 300;
+    waitUntil {sleep 1; !alive _this || !(_this getVariable [QGVAR(unconscious), false]) || diag_tickTime > _timeout};
+    if (_this getVariable [QGVAR(unconscious), false] && alive _this) then {
+        _this setDamage 1;
+        diag_log format ["[PRA3 Revive] Safety timeout: force-killed %1 after 300s unconscious", name _this];
+    };
+    if (hasInterface && _this isEqualTo player) then {
+        disableUserInput false;
+    };
+};
 
 // ======================================================================
-// 5. Fire unconsciousness event
+// 4. Fire unconsciousness event
 // ======================================================================
 ["unconsciousnessChanged", [_unit, true]] call PRA3_fw_fireEvent;
 

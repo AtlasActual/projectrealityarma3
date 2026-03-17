@@ -34,7 +34,7 @@ if (!_canSwitch) exitWith {
 };
 
 // Determine the target (opposite) side
-private _sides = EGVAR(Common,competingSides);
+private _sides = missionNamespace getVariable [QEGVAR(Common,competingSides), []];
 private _playerSide = side group player;
 private _targetSide = sideUnknown;
 

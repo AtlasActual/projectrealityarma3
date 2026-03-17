@@ -47,7 +47,7 @@ private _drainRate = 1.0 / GVAR(unconsciousDuration);
     private _bloodLevel = 1.0 - (_elapsed * _drainRate);
     _bloodLevel = _bloodLevel max 0.0;
 
-    _unit setVariable [QGVAR(bloodLevel), _bloodLevel];
+    _unit setVariable [QGVAR(bloodLevel), _bloodLevel, true];
 
     // ======================================================================
     // 3. Kill unit when blood is depleted

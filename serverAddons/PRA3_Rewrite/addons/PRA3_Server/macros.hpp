@@ -40,7 +40,7 @@
 #define QFWFUNC(name) QUOTE(FWFUNC(name))
 
 // --- UI macros ---
-#define UIVAR(name) QUOTE(DOUBLES(PREFIX,name))
+#define UIVAR(name) QUOTE(DOUBLES(DOUBLES(PREFIX,UI),name))
 
 // --- Localization ---
 // MLOC(key) => localized string from our localization hashmap

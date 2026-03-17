@@ -28,6 +28,7 @@ class SupplySetup {
     class FOBBox {
         displayName = "FOB Box";
         classname = "O_CargoNet_01_ammo_F";
+        content[] = {};
         removeDefaultLoadout = 1;
     };
 };

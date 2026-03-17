@@ -101,6 +101,7 @@ private _pointId = [
 _grp setVariable [QGVAR(rallyPointId), _pointId, true];
 _grp setVariable [QGVAR(lastPlacedAt), diag_tickTime, true];
 
+if (isNil QGVAR(liveRallies)) then { GVAR(liveRallies) = []; };
 GVAR(liveRallies) pushBackUnique _pointId;
 
 diag_log format [

@@ -18,14 +18,7 @@
 GVAR(getNearUnits) = {
     params ["_pos", "_radius"];
 
-    private _result = [];
-    private _radiusSq = _radius * _radius;
-
-    {
-        if (alive _x && {!captive _x} && {(_pos distanceSqr (getPosATL _x)) <= _radiusSq}) then {
-            _result pushBack _x;
-        };
-    } forEach allUnits;
+    private _result = (_pos nearEntities ["CAManBase", _radius]) select {alive _x && !captive _x};
 
     _result
 };

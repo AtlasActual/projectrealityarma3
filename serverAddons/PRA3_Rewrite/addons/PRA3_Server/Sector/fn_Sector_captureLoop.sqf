@@ -13,12 +13,16 @@
         _sector - (Object) the sector logic unit
         _pfhId  - (Number) PFH handle (patched in after creation)
 
+    Execution: server only (guarded).
+
     Capture model:
         - Two-phase: neutralise (progress 1.0 -> 0) then capture (0 -> 1.0)
         - Rate = 1 / (durMin + (durMax - durMin) * (1 - clamp(diff/maxTroops)))
         - Uses firstCapDuration for sectors that have never been owned
         - No passive decay: progress holds when no attackers are present
 */
+
+if (!isServer) exitWith {};
 
 params ["_sector", "_pfhId"];
 

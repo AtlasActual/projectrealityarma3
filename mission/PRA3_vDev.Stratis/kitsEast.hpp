@@ -81,7 +81,7 @@ class Kits {
         compassIcon[] = {"a3\ui_f\data\map\vehicleicons\pictureheal_ca.paa", 2};
 
         backpack = "B_TacticalPack_ocamo";
-        items[] = {{"FirstAidKit", 3}, {"Medikit", 1}, {"SmokeShell", 2}, "SmokeShellGreen", "SmokeShellRed"};
+        items[] = {{"FirstAidKit", 10}, {"HandGrenade", 2}, {"SmokeShell", 2}, "SmokeShellGreen", "SmokeShellRed", "Medikit"};
     };
     class AutomaticRifleman: Rifleman {
         kitGroup = "Limited";

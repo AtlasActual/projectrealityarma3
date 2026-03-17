@@ -109,7 +109,10 @@ if (!isServer) exitWith {};
             private _unitSide = side group _unit;
             private _tracked = GVAR(sectorUnits) getOrDefault [_sectorName, createHashMap];
             private _sideUnits = _tracked getOrDefault [_unitSide, []];
-            _sideUnits deleteAt (_sideUnits find _unit);
+            private _idx = _sideUnits find _unit;
+            if (_idx >= 0) then {
+                _sideUnits deleteAt _idx;
+            };
             _tracked set [_unitSide, _sideUnits];
             GVAR(sectorUnits) set [_sectorName, _tracked];
         }] call PRA3_fw_addHandler;

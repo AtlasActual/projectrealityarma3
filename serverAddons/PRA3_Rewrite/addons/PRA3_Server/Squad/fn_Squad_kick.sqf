@@ -32,12 +32,13 @@ params ["_targetUnit"];
         systemChat "That player is not in your squad.";
     };
 
-    // Create a new empty group for the kicked player
-    private _exileGroup = createGroup [side _targetUnit, true];
-    [_targetUnit] joinSilent _exileGroup;
-
-    // Notify the kicked player's machine about the group change
-    ["groupChanged", [_targetUnit, _exileGroup], owner _targetUnit] call PRA3_fw_fireTarget;
+    // Create a new empty group for the kicked player on their machine
+    [[_targetUnit], {
+        params ["_unit"];
+        private _exileGroup = createGroup [side _unit, true];
+        [_unit] joinSilent _exileGroup;
+        ["groupChanged", [_unit, _exileGroup]] call PRA3_fw_fireEvent;
+    }] remoteExec ["call", _targetUnit];
 
     systemChat format ["%1 has been removed from the squad.", name _targetUnit];
 

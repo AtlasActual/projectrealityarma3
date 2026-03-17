@@ -41,7 +41,8 @@ private _competingSides = EGVAR(Common,competingSides);
             // Create args array, then patch in the PFH id after creation
             private _pfhArgs = [_sector, -1];
             private _newPFH = [{
-                _this call FUNC(captureLoop);
+                params ["_args", "_pfhId"];
+                _args call FUNC(captureLoop);
             }, 0.5, _pfhArgs] call PRA3_fw_addPFH;
             _pfhArgs set [1, _newPFH];
 

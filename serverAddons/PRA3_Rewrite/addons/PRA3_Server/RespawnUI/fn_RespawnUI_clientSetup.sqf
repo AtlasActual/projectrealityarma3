@@ -25,8 +25,8 @@ GVAR(screenOpen) = false;
     private _tempUnit = _grp createUnit [typeOf player, _tempPos, [], 0, "NONE"];
 
     _tempUnit setVariable [QEGVAR(Common,tempUnit), true, true];
-    _tempUnit hideObjectGlobal true;
-    _tempUnit enableSimulationGlobal false;
+    [_tempUnit, true] remoteExec ["hideObjectGlobal", 2];
+    [_tempUnit, false] remoteExec ["enableSimulationGlobal", 2];
 
     selectPlayer _tempUnit;
 
@@ -65,8 +65,8 @@ GVAR(screenOpen) = false;
     private _grp = createGroup [_bestSide, true];
     private _tempUnit = _grp createUnit [typeOf player, [-1000, -1000, 10], [], 0, "NONE"];
     _tempUnit setVariable [QEGVAR(Common,tempUnit), true, true];
-    _tempUnit hideObjectGlobal true;
-    _tempUnit enableSimulationGlobal false;
+    [_tempUnit, true] remoteExec ["hideObjectGlobal", 2];
+    [_tempUnit, false] remoteExec ["enableSimulationGlobal", 2];
     selectPlayer _tempUnit;
     deleteVehicle _prevUnit;
 
@@ -87,9 +87,9 @@ GVAR(screenOpen) = false;
     showHUD [true, true, true, true, true, true, false, true];
 
     // Initialize the four screen panels (fire sub-module load events)
-    [UIVAR(SquadScreen_onLoad), _display] call PRA3_fw_fireEvent;
-    [UIVAR(RoleScreen_onLoad), _display] call PRA3_fw_fireEvent;
-    [UIVAR(DeploymentScreen_onLoad), _display] call PRA3_fw_fireEvent;
+    [UIVAR(SquadScreen_onLoad), [_display]] call PRA3_fw_fireEvent;
+    [UIVAR(RoleScreen_onLoad), [_display]] call PRA3_fw_fireEvent;
+    [UIVAR(DeploymentScreen_onLoad), [_display]] call PRA3_fw_fireEvent;
 
     // Wait one frame for controls to become accessible
     [{
@@ -121,7 +121,7 @@ GVAR(screenOpen) = false;
         // Side A: flag (601), name (603), tickets (605)
         private _flagA = missionNamespace getVariable [format [QEGVAR(Common,Flag_%1), _sideA], ""];
         private _nameA = missionNamespace getVariable [format [QEGVAR(Common,sideName_%1), _sideA], ""];
-        private _ticketsA = missionNamespace getVariable [format [QEGVAR(Tickets,sideTickets_%1), _sideA], _defaultTickets];
+        private _ticketsA = missionNamespace getVariable [format [QEGVAR(Tickets,count_%1), _sideA], _defaultTickets];
 
         (_display displayCtrl 601) ctrlSetText _flagA;
         (_display displayCtrl 603) ctrlSetText _nameA;
@@ -130,7 +130,7 @@ GVAR(screenOpen) = false;
         // Side B: flag (602), name (604), tickets (606)
         private _flagB = missionNamespace getVariable [format [QEGVAR(Common,Flag_%1), _sideB], ""];
         private _nameB = missionNamespace getVariable [format [QEGVAR(Common,sideName_%1), _sideB], ""];
-        private _ticketsB = missionNamespace getVariable [format [QEGVAR(Tickets,sideTickets_%1), _sideB], _defaultTickets];
+        private _ticketsB = missionNamespace getVariable [format [QEGVAR(Tickets,count_%1), _sideB], _defaultTickets];
 
         (_display displayCtrl 602) ctrlSetText _flagB;
         (_display displayCtrl 604) ctrlSetText _nameB;
@@ -177,8 +177,8 @@ GVAR(screenOpen) = false;
     private _sideA = EGVAR(Common,competingSides) select 0;
     private _sideB = EGVAR(Common,competingSides) select 1;
 
-    private _ticketsA = missionNamespace getVariable [format [QEGVAR(Tickets,sideTickets_%1), _sideA], _defaultTickets];
-    private _ticketsB = missionNamespace getVariable [format [QEGVAR(Tickets,sideTickets_%1), _sideB], _defaultTickets];
+    private _ticketsA = missionNamespace getVariable [format [QEGVAR(Tickets,count_%1), _sideA], _defaultTickets];
+    private _ticketsB = missionNamespace getVariable [format [QEGVAR(Tickets,count_%1), _sideB], _defaultTickets];
 
     (_display displayCtrl 605) ctrlSetText str _ticketsA;
     (_display displayCtrl 606) ctrlSetText str _ticketsB;

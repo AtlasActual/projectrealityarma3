@@ -51,6 +51,6 @@ _ppHandle ppEffectCommit 0;
     [{
         params ["_ppHandle"];
         ppEffectDestroy _ppHandle;
-    }, [_ppHandle], 2.2] call CBA_fnc_waitAndExecute;
+    }, 2.2, [_ppHandle]] call PRA3_fw_waitAndExec;
 
-}, [_ppHandle], 0.05] call CBA_fnc_waitAndExecute;
+}, 0.05, [_ppHandle]] call PRA3_fw_waitAndExec;

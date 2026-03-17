@@ -75,7 +75,7 @@ _logic setVariable [QGVAR(marker),           _markerName,       true];
 _logic setVariable [QGVAR(ownerSide),        _ownerSide,        true];
 _logic setVariable [QGVAR(attackingSide),    sideUnknown,       true];
 _logic setVariable [QGVAR(dependencies),     _dependencies,     true];
-_logic setVariable [QGVAR(ticketCost),       _ticketCost,       true];
+_logic setVariable [QGVAR(ticketValue),      _ticketCost,       true];
 _logic setVariable [QGVAR(minTroops),        _minTroops,        true];
 _logic setVariable [QGVAR(maxTroops),        _maxTroops,        true];
 _logic setVariable [QGVAR(captureDuration),  _captureDuration,  true];

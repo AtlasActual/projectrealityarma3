@@ -33,7 +33,7 @@ params ["_targetUnit"];
     };
 
     // Promote the target to group leader
-    _grp selectLeader _targetUnit;
+    [_grp, _targetUnit] remoteExec ["selectLeader", groupOwner _grp];
 
     // Notify all group members about the leadership change
     {

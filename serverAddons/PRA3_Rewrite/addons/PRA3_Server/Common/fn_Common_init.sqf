@@ -94,31 +94,32 @@ enableSentences false;
 // ======================================================================
 if (hasInterface) then {
     addMissionEventHandler ["HandleRating", {
-        0
+        params ["_unit", "_rating"];
+        if (_rating < 0) then { 0 } else { _rating }
     }];
 };
 
 // ======================================================================
 // 8. Fire "missionStarted" event when the mission is live
 // ======================================================================
-if (time > 0) then {
-    // Mission is already running (e.g. JIP)
-    ["missionStarted", []] call FWFUNC(fireEvent);
-} else {
-    // Mission just loaded -- wait for first frame
-    addMissionEventHandler ["Loaded", {
-        removeMissionEventHandler ["Loaded", _thisEventHandler];
-        ["missionStarted", []] call FWFUNC(fireEvent);
-    }];
+GVAR(missionStartFired) = false;
 
-    // Also handle the normal (non-save-load) start via EachFrame
-    [{
-        if (time > 0) then {
-            removeMissionEventHandler ["Loaded", -1]; // clean up if Loaded was not used
+addMissionEventHandler ["Loaded", {
+    removeMissionEventHandler ["Loaded", _thisEventHandler];
+    if (!GVAR(missionStartFired)) then {
+        GVAR(missionStartFired) = true;
+        ["missionStarted", []] call FWFUNC(fireEvent);
+    };
+}];
+
+[{
+    if (time > 0) then {
+        if (!GVAR(missionStartFired)) then {
+            GVAR(missionStartFired) = true;
             ["missionStarted", []] call FWFUNC(fireEvent);
         };
-    }, 0, []] call FWFUNC(execNextFrame);
-};
+    };
+}, 0, []] call FWFUNC(execNextFrame);
 
 // ======================================================================
 // 9. Server: forward entity creation through the event bus
@@ -127,6 +128,11 @@ if (isServer) then {
     addMissionEventHandler ["EntityCreated", {
         params ["_entity"];
         ["entityCreated", [_entity]] call FWFUNC(fireEvent);
+    }];
+
+    addMissionEventHandler ["EntityKilled", {
+        params ["_killed", "_killer", "_instigator"];
+        ["entityKilled", [_killed, _killer, _instigator]] call FWFUNC(fireEvent);
     }];
 };
 
@@ -159,6 +165,70 @@ if (hasInterface) then {
             ];
         };
     }, 1, []] call FWFUNC(addPFH);
+};
+
+// ======================================================================
+// 11. Initialize all PRA3 modules
+//     Deployment must be first (other modules depend on pointStorage).
+//     Modules with both init and setup functions: init registers handlers,
+//     setup runs at missionStarted. Modules with only clientSetup/serverSetup
+//     are called directly here.
+// ======================================================================
+
+// --- Shared systems (run on all machines) ---
+[] call EFUNC(Deployment,setup);
+[] call EFUNC(Notification,clientSetup);
+
+// --- Sector and Tickets (have their own init that handles server/client internally) ---
+[] call EFUNC(Sector,init);
+[] call EFUNC(Tickets,init);
+
+// --- Server-only module setups ---
+if (isServer) then {
+    [] call EFUNC(Deployment,serverSetup);
+    [] call EFUNC(FOB,serverSetup);
+    [] call EFUNC(VehicleRespawn,serverSetup);
+    [] call EFUNC(Rally,serverSetup);
+    [] call EFUNC(Logistic,serverSetup);
+    [] call EFUNC(PerformanceInfo,serverSetup);
+
+    diag_log "[PRA3] Server modules initialized.";
+};
+
+// --- Client-only module setups ---
+if (hasInterface) then {
+    [] call EFUNC(Deployment,clientSetup);
+    [] call EFUNC(RespawnUI,clientSetup);
+    [] call EFUNC(Squad,clientSetup);
+    [] call EFUNC(Kit,clientSetup);
+    [] call EFUNC(Revive,clientSetup);
+    [] call EFUNC(FOB,clientSetup);
+    [] call EFUNC(Rally,clientSetup);
+    [] call EFUNC(Logistic,clientSetup);
+    // Note: Sector_clientSetup is called by Sector_init after setupDone broadcast
+    [] call EFUNC(Nametags,clientSetup);
+    [] call EFUNC(CompassUI,clientSetup);
+    [] call EFUNC(UnitTracker,clientSetup);
+    [] call EFUNC(SquadRespawn,clientSetup);
+    [] call EFUNC(PerformanceInfo,clientSetup);
+
+    // Bridge engine Killed EH to PRA3 event bus (must be re-added on respawn)
+    GVAR(addKilledEH) = {
+        params ["_unit"];
+        _unit addEventHandler ["Killed", {
+            params ["_unit", "_killer", "_instigator", "_useEffects"];
+            ["Killed", _this] call FWFUNC(fireEvent);
+        }];
+    };
+    [player] call GVAR(addKilledEH);
+
+    // Re-add Killed EH after each respawn (new unit = new EH needed)
+    ["playerRespawned", {
+        params ["_newUnit"];
+        [_newUnit] call GVAR(addKilledEH);
+    }] call FWFUNC(addHandler);
+
+    diag_log "[PRA3] Client modules initialized.";
 };
 
 diag_log "[PRA3 Common] Init complete.";

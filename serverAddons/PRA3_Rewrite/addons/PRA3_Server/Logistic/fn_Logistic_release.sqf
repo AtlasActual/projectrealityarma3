@@ -39,7 +39,7 @@ detach _target;
 // ======================================================================
 // 2. Re-enable simulation
 // ======================================================================
-_target enableSimulationGlobal true;
+[_target, true] remoteExec ["enableSimulationGlobal", 2];
 
 // ======================================================================
 // 3. Place on the ground at a safe position (prevent floating)

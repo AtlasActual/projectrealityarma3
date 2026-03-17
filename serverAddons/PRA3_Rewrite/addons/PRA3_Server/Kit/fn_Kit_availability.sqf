@@ -28,14 +28,15 @@ if (_maxPerSquad < 0 && {_maxPerTeam < 0} && {_kitGroup isEqualTo ""}) exitWith 
 };
 
 // Check kitGroup membership: player must belong to the required group
+private _remaining = 99;
+
 if (_kitGroup isNotEqualTo "") then {
     private _playerGroup = player getVariable [QEGVAR(Squad,kitGroup), ""];
-    if (_playerGroup isNotEqualTo _kitGroup) exitWith {
-        0
+    if (_playerGroup isNotEqualTo _kitGroup) then {
+        _remaining = 0;
     };
 };
-
-private _remaining = 99;
+if (_remaining isEqualTo 0) exitWith { 0 };
 
 // Count squad-level usage
 if (_maxPerSquad >= 0) then {
@@ -44,7 +45,7 @@ if (_maxPerSquad >= 0) then {
 
     {
         private _unitKit = _x getVariable [QGVAR(currentKit), ""];
-        if (_unitKit isEqualTo _kitClassName && {_x isNotEqualTo player}) then {
+        if (_unitKit isEqualTo _kitClassName && {_x isNotEqualTo player} && {alive _x}) then {
             _squadCount = _squadCount + 1;
         };
     } forEach _squadUnits;
@@ -62,7 +63,7 @@ if (_maxPerTeam >= 0) then {
         if (side _x isEqualTo _playerSide) then {
             {
                 private _unitKit = _x getVariable [QGVAR(currentKit), ""];
-                if (_unitKit isEqualTo _kitClassName && {_x isNotEqualTo player}) then {
+                if (_unitKit isEqualTo _kitClassName && {_x isNotEqualTo player} && {alive _x}) then {
                     _teamCount = _teamCount + 1;
                 };
             } forEach units _x;

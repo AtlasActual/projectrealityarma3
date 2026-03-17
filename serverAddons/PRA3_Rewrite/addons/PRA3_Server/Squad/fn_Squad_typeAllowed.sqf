@@ -57,18 +57,20 @@ if (_existingCount >= _maxGroups) exitWith {
 };
 
 // Check minimum player threshold on this side
+private _blocked = false;
 if (_minPlayerCount > 0) then {
     private _sidePlayerCount = {
         side group _x isEqualTo _playerSide
     } count allPlayers;
 
-    if (_sidePlayerCount < _minPlayerCount) exitWith {
+    if (_sidePlayerCount < _minPlayerCount) then {
+        _blocked = true;
         diag_log format [
             "[PRA3 Squad] typeAllowed: '%1' needs %2 players, only %3 present",
             _typeName, _minPlayerCount, _sidePlayerCount
         ];
-        false
     };
 };
+if (_blocked) exitWith { false };
 
 true

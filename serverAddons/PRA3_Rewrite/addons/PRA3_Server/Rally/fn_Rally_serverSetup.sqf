@@ -82,6 +82,6 @@ if (GVAR(enemyScanLimit) <= 0) then { GVAR(enemyScanLimit) = 1;  };
         [_rId, _why] call FUNC(destroy);
     } forEach _condemned;
 
-}, 0.2, []] call PRA3_fw_addPFH;
+}, 2.0, []] call PRA3_fw_addPFH;
 
 diag_log "[PRA3:Rally] Server setup finished.";

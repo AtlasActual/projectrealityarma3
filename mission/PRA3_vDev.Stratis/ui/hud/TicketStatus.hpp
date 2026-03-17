@@ -79,7 +79,7 @@ class PRA3_UI_TicketStatus {
                 class Tickets : PRA3_RscText {
                     idc = 2023;
                     text = "1234";
-                    style = ST_Left;
+                    style = ST_LEFT;
                     x = PX(4);
                     y = PY(2.2);
                     w = PX(36);

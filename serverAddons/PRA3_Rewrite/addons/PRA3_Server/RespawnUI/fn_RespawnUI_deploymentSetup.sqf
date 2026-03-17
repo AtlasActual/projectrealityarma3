@@ -115,22 +115,22 @@ if (!hasInterface) exitWith {};
             params ["_deployDisp", "_roleDisp"];
 
             // Validate: player must be in a named squad
-            private _inSquad = (groupId group player) in EGVAR(Squad,squadIds);
+            private _inSquad = count (units group player) > 0 && {!(isNil QEGVAR(Squad,squadIds))} && {(groupId group player) in EGVAR(Squad,squadIds)};
             if (!_inSquad) exitWith {
-                [MLOC(JoinASquad)] call PRA3_fw_fireEvent;
+                [MLOC(JoinASquad), [0.7, 0.1, 0.1, 0.9], 4, 1] call EFUNC(Notification,show);
             };
 
             // Validate: a kit must be selected
             private _kitRow = lnbCurSelRow (_roleDisp displayCtrl 303);
             if (_kitRow < 0) exitWith {
-                [MLOC(ChooseARole)] call PRA3_fw_fireEvent;
+                [MLOC(ChooseARole), [0.7, 0.1, 0.1, 0.9], 4, 1] call EFUNC(Notification,show);
             };
 
             // Validate: a deployment point must be selected
             private _deployListCtrl = _deployDisp displayCtrl 403;
             private _deployRow = lnbCurSelRow _deployListCtrl;
             if (_deployRow < 0) exitWith {
-                [MLOC(selectSpawn)] call PRA3_fw_fireEvent;
+                [MLOC(selectSpawn), [0.7, 0.1, 0.1, 0.9], 4, 1] call EFUNC(Notification,show);
             };
 
             // Retrieve the stored deployment point identifier
@@ -139,10 +139,10 @@ if (!hasInterface) exitWith {};
             // Ask the Deployment module to consume a spawn ticket
             private _spawnData = [_pointId] call EFUNC(Deployment,consumeSpawn);
             if (isNil "_spawnData") exitWith {
-                ["Spawn point no longer available"] call PRA3_fw_fireEvent;
+                ["Spawn point no longer available", [0.7, 0.1, 0.1, 0.9], 4, 1] call EFUNC(Notification,show);
             };
 
-            private _spawnPos = _spawnData select 0;
+            private _spawnPos = _spawnData;
 
             // Close the screen before spawning
             _deployDisp closeDisplay 1;
@@ -152,13 +152,13 @@ if (!hasInterface) exitWith {};
                 params ["_spawnPos"];
 
                 // Perform the actual respawn at the deployment position
-                [_spawnPos] call EFUNC(Respawn,execute);
+                [player, _spawnPos] call EFUNC(Respawn,execute);
 
                 // Apply the selected kit on the following frame
                 [{
-                    private _kitConfig = player getVariable [QGVAR(selectedKit), ""];
+                    private _kitConfig = player getVariable [QEGVAR(Kit,selectedKit), ""];
                     if (_kitConfig isNotEqualTo "") then {
-                        [_kitConfig] call EFUNC(Kit,equip);
+                        [player, _kitConfig] call EFUNC(Kit,equip);
                     };
                 }] call PRA3_fw_execNextFrame;
 
@@ -183,8 +183,11 @@ if (!hasInterface) exitWith {};
         private _pointId = _x;
 
         // Fetch point metadata: name, remaining tickets, icon path
-        private _pointInfo = [_pointId, ["name", "spawntickets", "icon"]] call EFUNC(Deployment,getData);
-        _pointInfo params ["_name", "_tickets", "_icon"];
+        private _pointInfo = [_pointId, "all"] call EFUNC(Deployment,getData);
+        if (isNil "_pointInfo") then { continue };
+        private _name = _pointInfo getOrDefault ["name", "Unknown"];
+        private _tickets = _pointInfo getOrDefault ["spawnTickets", -1];
+        private _icon = _pointInfo getOrDefault ["icon", ""];
 
         // Append ticket count to the name if tickets are limited
         private _label = if (_tickets > 0) then {
@@ -235,7 +238,7 @@ if (!hasInterface) exitWith {};
     private _pointId = _listCtrl lnbData [_selRow, 0];
 
     // Fetch position from the Deployment module
-    private _pointInfo = [_pointId, ["position"]] call EFUNC(Deployment,getData);
+    private _pointInfo = [_pointId, "position"] call EFUNC(Deployment,getData);
     private _targetPos = _pointInfo select 0;
 
     // Smoothly pan the map to the selected point

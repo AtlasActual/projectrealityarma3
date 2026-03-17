@@ -66,10 +66,8 @@ private _entry = [_processed, _color, _duration, _priority, _conditionCode];
 
 GVAR(queue) pushBack _entry;
 
-// Sort descending on priority (index 3)
-GVAR(queue) sort false;
-GVAR(queue) = GVAR(queue) apply {_x};  // force copy so sort key sticks
-GVAR(queue) = [GVAR(queue), [], {_x select 3}] call BIS_fnc_sortBy;
+// Sort descending on priority (highest first)
+GVAR(queue) = [GVAR(queue), [], {-(_x select 3)}] call BIS_fnc_sortBy;
 
 // Kick off display processing when idle
 if (!GVAR(processing)) then {

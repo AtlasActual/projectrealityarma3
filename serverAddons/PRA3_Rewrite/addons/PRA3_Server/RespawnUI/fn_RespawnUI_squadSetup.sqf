@@ -91,7 +91,7 @@ if (!hasInterface) exitWith {};
 
     // Determine the next available designator letter
     private _usedLetters = (allGroups select {
-        side _x isEqualTo playerSide && {(groupId _x) in EGVAR(Squad,squadIds)}
+        side _x isEqualTo playerSide && {(groupId _x) in (missionNamespace getVariable [QEGVAR(Squad,squadIds), []])}
     }) apply { (groupId _x) select [0, 1] };
 
     private _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -219,7 +219,7 @@ if (!hasInterface) exitWith {};
 
     // Iterate all groups on the player's side that are registered squads
     private _sideGroups = allGroups select {
-        side _x isEqualTo playerSide && {(groupId _x) in EGVAR(Squad,squadIds)}
+        side _x isEqualTo playerSide && {(groupId _x) in (missionNamespace getVariable [QEGVAR(Squad,squadIds), []])}
     };
 
     {

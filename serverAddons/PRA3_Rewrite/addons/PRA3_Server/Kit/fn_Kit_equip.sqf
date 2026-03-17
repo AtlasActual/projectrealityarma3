@@ -17,6 +17,24 @@
 
 params ["_unit", "_kitConfig"];
 
+if (!local _unit) exitWith {
+    diag_log format ["[PRA3 Kit] WARNING: equip called on non-local unit %1", _unit];
+};
+
+// Resolve string classname to config path
+if (_kitConfig isEqualType "") then {
+    private _sideStr = switch (side group _unit) do {
+        case west: { "West" };
+        case east: { "East" };
+        case independent: { "Indep" };
+        default { "West" };
+    };
+    _kitConfig = missionConfigFile >> "PRA3" >> "Factions" >> _sideStr >> "Kits" >> _kitConfig;
+    if (!isClass _kitConfig) exitWith {
+        diag_log format ["[PRA3 Kit] equip: invalid kit classname '%1' for side %2", _this select 1, side group _unit];
+    };
+};
+
 private _kitDetails = [_kitConfig] call FUNC(details);
 private _kitClassName = configName _kitConfig;
 
@@ -88,13 +106,13 @@ private _weapons = _kitDetails get "weapons";
         _unit addWeapon _weaponClass;
 
         if (_muzzle isNotEqualTo "") then {
-            _unit addPrimaryWeaponItem _muzzle;
+            _unit addWeaponItem [_weaponClass, _muzzle];
         };
         if (_pointer isNotEqualTo "") then {
-            _unit addPrimaryWeaponItem _pointer;
+            _unit addWeaponItem [_weaponClass, _pointer];
         };
         if (_optic isNotEqualTo "") then {
-            _unit addPrimaryWeaponItem _optic;
+            _unit addWeaponItem [_weaponClass, _optic];
         };
     } else {
         _unit addWeapon _x;

@@ -36,8 +36,8 @@ private _uSide = side _grp;
 // ======================================================================
 // Cooldown
 // ======================================================================
-private _cd       = GVAR(cooldownTime);
-if (_cd <= 0) then { _cd = 10; };
+private _cd = if (isNil QGVAR(cooldownTime)) then { 300 } else { GVAR(cooldownTime) };
+if (_cd <= 0) then { _cd = 300; };
 
 private _lastSet  = _grp getVariable [QGVAR(lastPlacedAt), 0];
 if (diag_tickTime - _lastSet < _cd) exitWith { false };
@@ -45,14 +45,14 @@ if (diag_tickTime - _lastSet < _cd) exitWith { false };
 // ======================================================================
 // Enemy proximity — no enemies within configured radius
 // ======================================================================
-private _eRadius = GVAR(enemyCheckRadius);
+private _eRadius = if (isNil QGVAR(enemyCheckRadius)) then { 50 } else { GVAR(enemyCheckRadius) };
 if (_eRadius <= 0) then { _eRadius = 50; };
 
 private _scan       = [_uPos, _eRadius] call PRA3_fw_getNearUnits;
 private _hasHostile = false;
 
 {
-    if !(side group _x isEqualTo _uSide) exitWith {
+    if (side group _x isNotEqualTo _uSide && {side group _x isNotEqualTo civilian}) exitWith {
         _hasHostile = true;
     };
 } forEach _scan;
@@ -62,7 +62,7 @@ if (_hasHostile) exitWith { false };
 // ======================================================================
 // Nearby squad members — at least nearPlayerCount within 10 m
 // ======================================================================
-private _minNear = GVAR(nearPlayerCount);
+private _minNear = if (isNil QGVAR(nearPlayerCount)) then { 1 } else { GVAR(nearPlayerCount) };
 if (_minNear <= 0) then { _minNear = 1; };
 
 private _closeFriends = 0;

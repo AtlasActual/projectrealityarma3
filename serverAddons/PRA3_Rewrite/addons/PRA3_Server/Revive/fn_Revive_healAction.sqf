@@ -15,6 +15,8 @@
     Returns: nothing
 */
 
+if (!hasInterface) exitWith {};
+
 params ["_caller", "_target"];
 
 // ======================================================================

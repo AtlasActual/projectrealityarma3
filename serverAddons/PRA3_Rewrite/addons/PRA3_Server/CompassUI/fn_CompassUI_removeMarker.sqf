@@ -16,4 +16,4 @@ params ["_markerId"];
 
 if (isNil "_markerId" || {_markerId isEqualTo ""}) exitWith {};
 
-GVAR(lineMarkers) set [_markerId, nil];
+GVAR(lineMarkers) deleteAt _markerId;

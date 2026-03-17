@@ -13,6 +13,11 @@
 
 if (!hasInterface) exitWith {};
 
+// Initialize the tracked squad IDs registry (tracks which groups are PRA3 squads)
+if (isNil QGVAR(squadIds)) then {
+    GVAR(squadIds) = [];
+};
+
 // ======================================================================
 // 1. Load group type configuration from mission config
 // ======================================================================
@@ -58,16 +63,16 @@ GVAR(squadNames) = [
 // ======================================================================
 // 3. Side-switch restriction settings
 // ======================================================================
-private _cfgRoot = missionConfigFile >> "PRA3" >> "CfgSideSwitch";
+private _cfgRoot = missionConfigFile >> "PRA3" >> "GameRules";
 
-GVAR(restrictionCount) = getNumber (_cfgRoot >> "restrictionCount");
-GVAR(restrictionTime)  = getNumber (_cfgRoot >> "restrictionTime");
-
-// Apply defaults if config values are missing
-if (GVAR(restrictionCount) isEqualTo 0) then {
+if (isNumber (_cfgRoot >> "restrictSideSwitchRestrictionCount")) then {
+    GVAR(restrictionCount) = getNumber (_cfgRoot >> "restrictSideSwitchRestrictionCount");
+} else {
     GVAR(restrictionCount) = 2;
 };
-if (GVAR(restrictionTime) isEqualTo 0) then {
+if (isNumber (_cfgRoot >> "restrictSideSwitchRestrictionTime")) then {
+    GVAR(restrictionTime) = getNumber (_cfgRoot >> "restrictSideSwitchRestrictionTime");
+} else {
     GVAR(restrictionTime) = 300;
 };
 

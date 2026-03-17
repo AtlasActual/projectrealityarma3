@@ -14,6 +14,8 @@
     Returns: nothing
 */
 
+if (!hasInterface) exitWith {};
+
 params ["_vehicle"];
 
 // ======================================================================

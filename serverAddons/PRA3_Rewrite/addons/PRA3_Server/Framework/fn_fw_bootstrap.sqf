@@ -11,6 +11,7 @@
 GVAR(ready) = false;
 
 diag_log "[PRA3] Framework bootstrap starting...";
+diag_log format ["[PRA3] Framework v%1.%2.%3.%4", MAJOR, MINOR, PATCHLVL, BUILD];
 
 // 1. Event bus -- must be first, other systems may register events
 [] call FWFUNC(eventBus);

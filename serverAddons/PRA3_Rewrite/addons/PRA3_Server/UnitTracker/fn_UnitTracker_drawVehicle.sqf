@@ -51,10 +51,10 @@ private _color = switch (_vehSide) do {
 private _iconType = switch (true) do {
     case (_vehicle isKindOf "Helicopter"): { "mil_helicopter" };
     case (_vehicle isKindOf "Plane"):      { "mil_air" };
+    case (_vehicle isKindOf "APC"):        { "mil_armor" };
     case (_vehicle isKindOf "Tank"):       { "mil_armor" };
     case (_vehicle isKindOf "Car"):        { "mil_motor_inf" };
     case (_vehicle isKindOf "Ship"):       { "mil_naval" };
-    case (_vehicle isKindOf "APC"):        { "mil_armor" };
     default                                { "mil_unknown" };
 };
 

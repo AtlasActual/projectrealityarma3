@@ -17,7 +17,7 @@
 private _cfgRoot = missionConfigFile >> "PRA3" >> "GameRules";
 
 GVAR(startingTickets)    = getNumber (_cfgRoot >> "tickets");
-GVAR(ticketBleedInterval) = getArray (_cfgRoot >> "ticketBleed") param [0, 30];
+GVAR(ticketBleedInterval) = (getArray (_cfgRoot >> "ticketBleed") param [0, 30]) max 1;
 GVAR(ticketBleedAmount)  = getArray (_cfgRoot >> "ticketBleed") param [1, 1];
 GVAR(musicStartThreshold) = getNumber (_cfgRoot >> "musicStart");
 GVAR(playerTicketCost)   = getNumber (_cfgRoot >> "playerTicketValue");
@@ -136,7 +136,7 @@ diag_log format [
             } forEach _sides;
 
             {
-                private _owner = _x getVariable [QEGVAR(Sector,owner), sideUnknown];
+                private _owner = _x getVariable [QEGVAR(Sector,ownerSide), sideUnknown];
                 if (_owner in _sides) then {
                     private _cur = _ownershipCount getOrDefault [_owner, 0];
                     _ownershipCount set [_owner, _cur + 1];
@@ -204,14 +204,17 @@ diag_log format [
         ["ticketsChanged", {
             params ["_changedSide", "_newCount"];
 
-            if (!isDedicated) exitWith {};
+            if (!isServer) exitWith {};
 
             if (_newCount <= 0) then {
                 diag_log format [
-                    "[PRA3 Tickets] %1 has reached 0 tickets. Ending mission.",
+                    "[PRA3 Tickets] %1 has reached 0 tickets. Ending mission in 5s.",
                     _changedSide
                 ];
-                "END1" call BIS_fnc_endMission;
+                // Delay to allow clients to render end-screen UI
+                [{
+                    "END1" call BIS_fnc_endMission;
+                }, 5, []] call PRA3_fw_waitAndExec;
             };
         }] call PRA3_fw_addHandler;
 

@@ -18,6 +18,10 @@
 
 params [["_caller", objNull, [objNull]]];
 
+if (!isServer) exitWith {
+    diag_log "[PRA3:FOB] place called on non-server machine, aborting";
+};
+
 // ======================================================================
 // 1. Validate
 // ======================================================================

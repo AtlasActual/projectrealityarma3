@@ -54,8 +54,11 @@ player playMove "AmovPercMstpSnonWnonDnon";
         hintSilent "";
         [_pfh] call PRA3_fw_removePFH;
 
-        // Forward the placement to the server
-        [player] remoteExecCall [QFUNC(place), 2];
+        // Forward the placement to the server via mutex to prevent race conditions
+        ["fobPlace", {
+            params ["_caller"];
+            [_caller] call FUNC(place);
+        }, [player]] call PRA3_fw_mutexLock;
 
         diag_log format ["[PRA3:FOB] Build hold completed by %1", name player];
     };

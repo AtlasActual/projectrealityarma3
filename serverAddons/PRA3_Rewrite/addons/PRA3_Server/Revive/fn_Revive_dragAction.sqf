@@ -62,7 +62,7 @@ private _releaseActionId = _caller addAction [
             // Place on ground properly
             private _dropPos = _unit modelToWorld [0, -2, 0];
             _dropPos set [2, 0];
-            _draggedUnit setPos _dropPos;
+            _draggedUnit setPosATL _dropPos;
         };
 
         _unit forceWalk false;

@@ -37,7 +37,7 @@ player addEventHandler ["GetInMan", {
 
     // Eject and notify if player lacks the required kit role
     if (_restricted) then {
-        _unit action ["Eject", _vehicle];
+        moveOut _unit;
 
         private _msg = MLOC(VehicleRestricted);
         [_msg, [0.7, 0.1, 0.1, 0.9], 4, 1] call EFUNC(Notification,show);

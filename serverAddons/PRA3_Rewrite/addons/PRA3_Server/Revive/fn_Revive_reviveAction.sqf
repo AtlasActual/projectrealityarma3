@@ -16,6 +16,8 @@
     Returns: nothing
 */
 
+if (!hasInterface) exitWith {};
+
 params ["_caller", "_target"];
 
 // ======================================================================
@@ -102,8 +104,9 @@ private _startTime = time;
                 GVAR(blurHandle) ppEffectCommit 2.0;
 
                 [{
-                    GVAR(blurHandle) ppEffectEnable false;
-                }, [], 2.2] call CBA_fnc_waitAndExecute;
+                    params ["_blurHandle"];
+                    _blurHandle ppEffectEnable false;
+                }, 2.2, [GVAR(blurHandle)]] call PRA3_fw_waitAndExec;
             };
         };
 

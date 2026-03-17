@@ -142,6 +142,8 @@ class Kits {
         displayName = "Engineer";
 
         isEngineer = 1;
+        backpack = "B_AssaultPack_rgr";
+        items[] = {{"FirstAidKit", 3}, {"HandGrenade", 2}, {"SmokeShell", 2}, "ToolKit"};
 
         UIIcon = "a3\ui_f\data\IGUI\Cfg\Actions\repair_ca.paa";
     };

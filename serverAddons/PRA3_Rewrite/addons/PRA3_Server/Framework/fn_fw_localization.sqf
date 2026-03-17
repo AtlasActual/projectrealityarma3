@@ -17,6 +17,10 @@
 // ------------------------------------------------------------------
 GVAR(language) = "English";
 
+// Shared empty map used as a safe default to avoid allocating a new
+// HashMap on every loc lookup that misses the module variable.
+if (isNil QGVAR(emptyMap)) then { GVAR(emptyMap) = createHashMap };
+
 GVAR(initLoc) = {
     private _lang = profileNamespace getVariable ["PRA3_language", "English"];
 
@@ -51,11 +55,11 @@ GVAR(loc) = {
     params ["_module", "_key"];
 
     private _locVarName = format ["PRA3_%1_loc", _module];
-    private _locMap = missionNamespace getVariable [_locVarName, createHashMap];
+    private _locMap = missionNamespace getVariable [_locVarName, GVAR(emptyMap)];
 
-    private _translations = _locMap getOrDefault [_key, createHashMap];
+    private _translations = _locMap getOrDefault [_key, GVAR(emptyMap)];
 
-    if (_translations isEqualTo createHashMap) exitWith { _key };
+    if (count _translations == 0) exitWith { _key };
 
     private _lang = GVAR(language);
     private _text = _translations getOrDefault [_lang, ""];

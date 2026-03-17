@@ -60,8 +60,11 @@ if (_target isKindOf "StaticWeapon") then {
         _gunner action ["Eject", _target];
         // Brief delay for ejection to complete
         [{
-            params ["_g"];
-            if (vehicle _g == _g) exitWith {};
+            params ["_args", "_pfhId"];
+            _args params ["_g"];
+            if (vehicle _g == _g) exitWith {
+                [_pfhId] call PRA3_fw_removePFH;
+            };
             _g action ["Eject", vehicle _g];
         }, 0.5, [_gunner]] call PRA3_fw_addPFH;
     };
@@ -80,7 +83,7 @@ _target attachTo [_unit, _attachOffset];
 // ======================================================================
 // 4. Disable target simulation to prevent physics glitches
 // ======================================================================
-_target enableSimulationGlobal false;
+[_target, false] remoteExec ["enableSimulationGlobal", 2];
 
 // ======================================================================
 // 5. Force walk animation if the object is heavy

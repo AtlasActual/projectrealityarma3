@@ -14,7 +14,7 @@
 GVAR(eventRegistry) = createHashMap;
 
 // Counter for generating unique handler indices per event
-private _idCounter = createHashMap;
+GVAR(eventIdCounter) = createHashMap;
 
 // ------------------------------------------------------------------
 // PRA3_fw_addHandler
@@ -32,15 +32,16 @@ GVAR(addHandler) = {
         _registry set [_eventName, _handlers];
     };
 
-    private _idx = count _handlers;
+    private _nextId = GVAR(eventIdCounter) getOrDefault [_eventName, 0];
+    GVAR(eventIdCounter) set [_eventName, _nextId + 1];
 
     if (_insertFirst) then {
-        _handlers insert [0, [[_handlerCode, true, _idx]]];
+        _handlers insert [0, [[_handlerCode, true, _nextId]]];
     } else {
-        _handlers pushBack [_handlerCode, true, _idx];
+        _handlers pushBack [_handlerCode, true, _nextId];
     };
 
-    _idx
+    _nextId
 };
 
 // ------------------------------------------------------------------
@@ -101,7 +102,7 @@ GVAR(fireGlobal) = {
 
     // remoteExecCall on all machines (target 0)
     // We call PRA3_fw_fireEvent on every machine
-    [[_eventName, _args], GVAR(fireEvent)] remoteExecCall ["call", 0, _jipId];
+    [_eventName, _args] remoteExecCall [QGVAR(fireEvent), 0, _jipId];
 };
 
 // ------------------------------------------------------------------
@@ -111,7 +112,7 @@ GVAR(fireGlobal) = {
 GVAR(fireServer) = {
     params ["_eventName", ["_args", []]];
 
-    [[_eventName, _args], GVAR(fireEvent)] remoteExecCall ["call", 2];
+    [_eventName, _args] remoteExecCall [QGVAR(fireEvent), 2];
 };
 
 // ------------------------------------------------------------------
@@ -130,7 +131,7 @@ GVAR(fireTarget) = {
         ""
     };
 
-    [[_eventName, _args], GVAR(fireEvent)] remoteExecCall ["call", _targets, _jipId];
+    [_eventName, _args] remoteExecCall [QGVAR(fireEvent), _targets, _jipId];
 };
 
 diag_log "[PRA3] Event bus initialized";

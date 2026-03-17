@@ -121,8 +121,8 @@ GVAR(loadActionId) = player addAction [
                 [_unit] call FUNC(release);
 
                 // Hide and disable the object
-                _carried hideObjectGlobal true;
-                _carried enableSimulationGlobal false;
+                [_carried, true] remoteExec ["hideObjectGlobal", 2];
+                [_carried, false] remoteExec ["enableSimulationGlobal", 2];
                 _carried setPosATL [0, 0, 0];
 
                 // Register in vehicle cargo
@@ -215,8 +215,8 @@ GVAR(unloadActionId) = player addAction [
 
                 private _safePos = [_dropPos, 10] call PRA3_fw_safePos;
 
-                _cargoObj hideObjectGlobal false;
-                _cargoObj enableSimulationGlobal true;
+                [_cargoObj, false] remoteExec ["hideObjectGlobal", 2];
+                [_cargoObj, true] remoteExec ["enableSimulationGlobal", 2];
                 _cargoObj setPosATL [_safePos select 0, _safePos select 1, 0];
 
                 systemChat format [

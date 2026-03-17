@@ -52,13 +52,24 @@ if (!isNull _oldVehicle) then {
 [{
     params [
         "_vehicleType", "_varName", "_spawnPosition",
-        "_spawnDirection", "_respawnCondition", "_respawnCounter"
+        "_spawnDirection", "_respawnCondition", "_respawnCounter",
+        "_oldVehicle"
     ];
 
     // ==================================================================
     // 3. Evaluate respawn condition
     // ==================================================================
-    private _conditionMet = call compile _respawnCondition;
+    private _conditionMet = switch (toLower _respawnCondition) do {
+        case "true": { true };
+        case "false": { false };
+        case "": { true };
+        case "destroyed": { !alive _oldVehicle };
+        case "empty": { count crew _oldVehicle == 0 };
+        default {
+            diag_log format ["[PRA3 VehicleRespawn] Unknown condition: '%1', defaulting to true", _respawnCondition];
+            true
+        };
+    };
     if (!(_conditionMet isEqualTo true)) exitWith {
         diag_log format [
             "[PRA3 VehicleRespawn] Respawn condition failed for '%1' (%2) — aborting.",
@@ -69,7 +80,7 @@ if (!isNull _oldVehicle) then {
     // ==================================================================
     // 4. Find a safe spawn position
     // ==================================================================
-    private _safePos = [_spawnPosition, 0, 15, 5, 0] call PRA3_fw_safePos;
+    private _safePos = [_spawnPosition, 15] call PRA3_fw_safePos;
     if (count _safePos < 3) then {
         _safePos = _spawnPosition;
     };
@@ -78,6 +89,9 @@ if (!isNull _oldVehicle) then {
     // 5. Create the new vehicle
     // ==================================================================
     private _newVehicle = createVehicle [_vehicleType, _safePos, [], 0, "CAN_COLLIDE"];
+    if (isNull _newVehicle) exitWith {
+        diag_log format ["[PRA3 VehicleRespawn] CRITICAL: createVehicle failed for '%1'", _vehicleType];
+    };
     _newVehicle setPosATL _safePos;
     _newVehicle setDir _spawnDirection;
 
@@ -169,5 +183,6 @@ if (!isNull _oldVehicle) then {
 
 }, 3, [
     _vehicleType, _varName, _spawnPosition,
-    _spawnDirection, _respawnCondition, _respawnCounter
+    _spawnDirection, _respawnCondition, _respawnCounter,
+    _oldVehicle
 ]] call PRA3_fw_waitAndExec;

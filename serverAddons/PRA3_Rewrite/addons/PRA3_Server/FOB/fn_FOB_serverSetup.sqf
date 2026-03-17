@@ -34,6 +34,30 @@ private _cfg = missionConfigFile >> "PRA3" >> "BaseConfig";
 GVAR(ticketPenalty) = getNumber (_cfg >> "ticketPenalty");
 if (GVAR(ticketPenalty) <= 0) then { GVAR(ticketPenalty) = 20; };
 
+// Initialize config values for server-side canPlace validation
+GVAR(minDistance) = getNumber (_cfg >> "minDistance");
+if (GVAR(minDistance) <= 0) then { GVAR(minDistance) = 600; };
+GVAR(maxEnemyToPlace) = getNumber (_cfg >> "maxEnemyPlace");
+if (GVAR(maxEnemyToPlace) <= 0) then { GVAR(maxEnemyToPlace) = 5; };
+
+// Initialize sideData on server
+GVAR(sideData) = createHashMap;
+private _factionsCfg = missionConfigFile >> "PRA3" >> "Factions";
+{
+    private _sideCfg = _factionsCfg >> _x;
+    if (isClass _sideCfg) then {
+        private _sideMap = createHashMap;
+        _sideMap set ["compositionClass", getText (_sideCfg >> "FOBComposition")];
+        private _sideVal = switch (toLower _x) do {
+            case "west": { west };
+            case "east": { east };
+            case "indep": { independent };
+            default { sideUnknown };
+        };
+        GVAR(sideData) set [_sideVal, _sideMap];
+    };
+} forEach ["West", "East", "Indep"];
+
 // ======================================================================
 // 2. Internal helper — create / resume the countdown PFH
 // ======================================================================
@@ -81,7 +105,11 @@ DFUNC(launchCountdown) = {
             _sndHelper hideObjectGlobal true;
             [_sndHelper, "beep"] remoteExecCall ["say3D", 0];
             // Remove helper after the sound finishes
-            [{deleteVehicle (_this select 0)}, [_sndHelper], 2.5] call PRA3_fw_addPFH;
+            [{
+                params ["_args", "_pfhId"];
+                deleteVehicle (_args select 0);
+                [_pfhId] call PRA3_fw_removePFH;
+            }, 2.5, [_sndHelper]] call PRA3_fw_addPFH;
             _td set ["lastBeep", diag_tickTime];
         };
 

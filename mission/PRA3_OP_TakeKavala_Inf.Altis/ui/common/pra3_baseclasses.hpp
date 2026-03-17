@@ -24,7 +24,7 @@ class PRA3_RscButtonMenu_Colored : PRA3_RscButtonMenu {
 };
 
 class PRA3_RscEdit : RscEdit {
-    idc = 201;
+    idc = -1;
     text = "";
     font = "PuristaMedium";
     style = ST_LEFT+ST_NO_RECT;

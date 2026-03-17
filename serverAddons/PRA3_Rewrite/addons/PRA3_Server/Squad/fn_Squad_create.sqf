@@ -55,6 +55,10 @@ params ["_description", "_type"];
     // Move the player into the newly created group
     [player] joinSilent _newGroup;
 
+    // Register this squad ID in the tracked list
+    if (isNil QGVAR(squadIds)) then { GVAR(squadIds) = []; };
+    GVAR(squadIds) pushBackUnique _squadId;
+
     // Notify local systems of the group change
     ["groupChanged", [player, _newGroup]] call PRA3_fw_fireEvent;
 

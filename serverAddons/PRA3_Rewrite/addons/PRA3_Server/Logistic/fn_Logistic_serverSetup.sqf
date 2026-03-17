@@ -110,7 +110,7 @@ GVAR(defaultCargoCapacity) = 4;
     private _netId = netId _entity;
     if (_netId in GVAR(vehicleCargo)) then {
         // Unload all cargo items onto the ground before removal
-        private _cargoList = GVAR(vehicleCargo) getOrDefault [_netId, []];
+        private _cargoList = _entity getVariable [QGVAR(cargoLoaded), []];
         private _dropPos = getPosATL _entity;
 
         {

@@ -40,7 +40,7 @@ if (isNil "_customData") then {
 };
 
 // Derive a repeatable identifier from the point metadata
-private _pointId = format ["%1_%2_%3", _type, _name, floor (_position select 0)];
+private _pointId = format ["%1_%2_%3_%4", _type, _name, floor (_position select 0), floor (_position select 1)];
 
 // Pack every field into a single HashMap record
 private _entry = createHashMap;

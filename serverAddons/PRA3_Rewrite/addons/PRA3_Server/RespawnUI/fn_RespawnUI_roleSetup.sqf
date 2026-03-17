@@ -113,6 +113,7 @@ GVAR(selectedKit) = "";
     if (_chosenKit isNotEqualTo _previousKit) then {
         // Store the kit assignment (publicVariable so squad sees it)
         player setVariable [QEGVAR(Kit,currentKit), _chosenKit, true];
+        player setVariable [QEGVAR(Kit,selectedKit), _chosenKit];
         GVAR(selectedKit) = _chosenKit;
 
         // Refresh the list on all group members so counts update
@@ -162,7 +163,8 @@ GVAR(selectedKit) = "";
 
             // Look through weapons to find one matching the slot
             {
-                private _wepCfg = configFile >> "CfgWeapons" >> _x;
+                private _wepClass = if (_x isEqualType []) then { _x select 0 } else { _x };
+                private _wepCfg = configFile >> "CfgWeapons" >> _wepClass;
                 if (isClass _wepCfg) then {
                     private _type = getNumber (_wepCfg >> "type");
                     // type 1 = primary, type 2 = handgun, type 4 = launcher

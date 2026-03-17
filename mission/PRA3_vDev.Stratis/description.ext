@@ -70,11 +70,21 @@ class RscTitles {
 
 class CfgRemoteExec {
     class Functions {
-        mode = 2; // allow all for now — whitelist in production
+        mode = 1;
         jip = 1;
+        class PRA3_fw_fireEvent { allowedTargets = 0; };
+        class PRA3_fw_mutexGranted { allowedTargets = 0; };
+        class PRA3_fw_mutexRelease_srv { allowedTargets = 2; };
+        class PRA3_fw_mutexRequest_srv { allowedTargets = 2; };
+        class PRA3_fnc_FOB_place { allowedTargets = 2; };
+        class PRA3_fnc_Rally_place { allowedTargets = 2; };
+        class PRA3_fnc_Rally_destroy { allowedTargets = 2; };
     };
     class Commands {
-        mode = 2;
+        mode = 1;
         jip = 1;
+        class hideObjectGlobal { allowedTargets = 2; };
+        class enableSimulationGlobal { allowedTargets = 2; };
+        class selectLeader { allowedTargets = 0; };
     };
 };

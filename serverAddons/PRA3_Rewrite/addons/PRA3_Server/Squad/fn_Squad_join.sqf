@@ -21,13 +21,13 @@ params ["_targetGroup"];
     private _groupType = _targetGroup getVariable [QGVAR(type), "infantry"];
     private _typeCfg = missionConfigFile >> "PRA3" >> "TeamRoles" >> _groupType;
 
-    private _maxMembers = getNumber (_typeCfg >> "maxMembers");
+    private _maxMembers = getNumber (_typeCfg >> "groupSize");
     if (_maxMembers isEqualTo 0) then {
         _maxMembers = 8;
     };
 
     // Check current group size against the cap
-    private _currentSize = count (units _targetGroup);
+    private _currentSize = {alive _x} count (units _targetGroup);
     if (_currentSize >= _maxMembers) exitWith {
         systemChat format [
             "Squad is full (%1/%2).",
